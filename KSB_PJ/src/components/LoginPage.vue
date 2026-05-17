@@ -141,7 +141,7 @@ const handleLogin = async () => {
   padding: 24px;
   background: no-repeat;
   background-position: center -48px;
-  background-size: 108%;
+  background-size: cover;
   font-family: 'Poppins', sans-serif;
   opacity: 0;
   transform: translateY(-24px);
@@ -156,7 +156,7 @@ const handleLogin = async () => {
   opacity: 1;
   transform: translateY(0);
   background-position: center;
-  background-size: 100%;
+  background-size: cover;
 }
 
 .form-box {
@@ -392,21 +392,60 @@ button:disabled {
 
 @media (max-width: 480px) {
   .login-section {
-    padding: 16px;
+    min-height: 100svh;
+    align-items: center;
+    padding: max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+    background-position: center;
+    background-size: cover;
   }
 
   .form-box {
+    width: min(100%, 360px);
     min-height: auto;
-    padding: 28px 0;
+    padding: 26px 0 28px;
+    border-radius: 18px;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
   }
 
   .form-value {
-    padding: 0 20px;
+    padding: 0 22px;
+  }
+
+  .login-header {
+    gap: 2px;
+    margin-bottom: 18px;
+  }
+
+  .login-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .inputbox {
+    margin: 18px 0;
+    min-height: 48px;
+  }
+
+  .inputbox input {
+    height: 42px;
+    font-size: 0.98rem;
   }
 
   .forget {
+    margin: 4px 0 18px;
+    font-size: 0.95rem;
     gap: 12px;
     flex-wrap: wrap;
+  }
+
+  button {
+    height: 46px;
+    font-size: 1rem;
   }
 }
 
