@@ -1,4 +1,5 @@
 import { apiRequest } from '@/utils/apiClient'
+import { getSignatureProfile } from '@/utils/signatureStore'
 
 const REPORTS_KEY = 'ksb_submitted_reports'
 const REPORT_META_KEY = 'ksb_report_meta'
@@ -106,6 +107,14 @@ const normalizeMealItem = item => ({
   ghiChu: ''
 })
 
+const normalizeSignature = item => ({
+  viTri: item.viTri ?? item.ViTri ?? '',
+  tenNguoiKy: item.tenNguoiKy ?? item.TenNguoiKy ?? '',
+  chucVuNguoiKy: item.chucVuNguoiKy ?? item.ChucVuNguoiKy ?? '',
+  duLieuChuKy: item.duLieuChuKy ?? item.DuLieuChuKy ?? '',
+  ngayKy: item.ngayKy ?? item.NgayKy ?? ''
+})
+
 const normalizeSummary = item => {
   const report = {
     id: item.id ?? item.Id,
@@ -156,7 +165,7 @@ const normalizeDetail = item => {
     thucDonThayDoi: (item.thucDonHangNgay ?? item.ThucDonHangNgay ?? '') === 'ThayDoi',
     thanhPhans: (item.thanhPhans ?? item.ThanhPhans ?? []).map(normalizeParticipant),
     chiTiets: [...mealItems, ...detailItems].sort((a, b) => (a.mucSo || 0) - (b.mucSo || 0)),
-    chuKys: item.chuKys ?? item.ChuKys ?? [],
+    chuKys: (item.chuKys ?? item.ChuKys ?? []).map(normalizeSignature),
     dinhLuongs: item.dinhLuongs ?? item.DinhLuongs ?? []
   }
 
@@ -208,6 +217,26 @@ const applyMetaPatch = (id, patch) => {
   writeReports(reports)
 }
 
+const getReportSignatures = report => {
+  if (report.chuKys?.length) {
+    return report.chuKys
+  }
+
+  const employeeSignature = getSignatureProfile('employee')
+  if (!employeeSignature?.imageData) {
+    return []
+  }
+
+  return [
+    {
+      viTri: 'NhanVienKhaoSat',
+      tenNguoiKy: employeeSignature.name || 'Nhan vien khao sat',
+      chucVuNguoiKy: employeeSignature.role || 'Nhan vien khao sat',
+      duLieuChuKy: employeeSignature.imageData
+    }
+  ]
+}
+
 const createBasePayload = report => ({
   soBienBan: report.soBienBan,
   loaiBienBan: toBackendType(report.loaiBienBan),
@@ -219,7 +248,7 @@ const createBasePayload = report => ({
     hoTen: item.hoTen,
     chucVu: item.chucVu
   })),
-  chuKys: report.chuKys || []
+  chuKys: getReportSignatures(report)
 })
 
 const buildCreatePayload = report => {

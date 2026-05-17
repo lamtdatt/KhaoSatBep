@@ -305,6 +305,7 @@ watch(
               </span>
             </button>
 
+            <Teleport to="body">
             <transition name="dropdown">
               <div
                 v-if="showNotificationDropdown"
@@ -347,6 +348,7 @@ watch(
                 </div>
               </div>
             </transition>
+            </Teleport>
           </div>
         </div>
       </header>
@@ -735,10 +737,10 @@ watch(
 
 /* Notification Dropdown */
 .notification-dropdown {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  z-index: 100;
+  position: fixed;
+  top: 82px;
+  right: 30px;
+  z-index: 2147483000;
   width: 400px;
   max-height: 480px;
   display: flex;
@@ -1168,6 +1170,14 @@ watch(
     height: 42px;
     border-radius: 12px;
     flex: 0 0 auto;
+  }
+
+  .notification-dropdown {
+    top: max(76px, calc(env(safe-area-inset-top) + 62px));
+    right: 14px;
+    left: 14px;
+    width: auto;
+    max-height: min(520px, calc(100dvh - 110px));
   }
 
   .content-area {

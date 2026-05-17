@@ -448,6 +448,7 @@ const selectReport = async report => {
   selectedId.value = report.id
   const currentReport = await getReportById(report.id)
   selectedReport.value = structuredClone(currentReport)
+  employeeSignature.value = signatureProfileFromReport(currentReport) || getSignatureProfile('employee')
   isEditingReport.value = false
 
   if (!report.readByAdmin) {
@@ -695,6 +696,22 @@ const getReportNote = item => {
   return parts.join(' | ')
 }
 
+const signatureProfileFromReport = report => {
+  const signature = report?.chuKys?.find(item => item.duLieuChuKy || item.DuLieuChuKy)
+  if (!signature) {
+    return null
+  }
+
+  return {
+    name: signature.tenNguoiKy || signature.TenNguoiKy || '',
+    role: signature.chucVuNguoiKy || signature.ChucVuNguoiKy || '',
+    imageData: signature.duLieuChuKy || signature.DuLieuChuKy || '',
+    updatedAt: signature.ngayKy || signature.NgayKy || ''
+  }
+}
+
+const activeEmployeeSignature = computed(() => signatureProfileFromReport(activeReport.value) || employeeSignature.value)
+
 const renderSignature = (profile, title, signedAt = '') => {
   const image = profile?.imageData
     ? `<img src="${profile.imageData}" alt="${escapeHtml(title)}" />`
@@ -716,9 +733,9 @@ const exportPdf = () => {
     return
   }
 
-  const employeeSignature = getSignatureProfile('employee')
-  const currentAdminSignature = getSignatureProfile('admin')
   const report = activeReport.value
+  const employeeSignature = signatureProfileFromReport(report) || getSignatureProfile('employee')
+  const currentAdminSignature = getSignatureProfile('admin')
   const details = report.chiTiets || []
   const approvedAt = report.approvedAt || (report.status === 'approved' ? report.updatedAt : '')
   const exportedAt = new Date().toISOString()
@@ -837,9 +854,9 @@ const exportPdfAdvanced = async () => {
     return
   }
 
-  const employeeProfile = getSignatureProfile('employee')
-  const adminProfile = getSignatureProfile('admin')
   const report = activeReport.value
+  const employeeProfile = signatureProfileFromReport(report) || getSignatureProfile('employee')
+  const adminProfile = getSignatureProfile('admin')
   const stats = getReportStats(report)
   const details = report.chiTiets || []
   const approvedAt = report.approvedAt || (report.status === 'approved' ? report.updatedAt : '')
@@ -1340,7 +1357,7 @@ watch(activeSection, async section => {
                 :key="report.id"
                 type="button"
                 class="report-library-item"
-                :class="{ unread: !report.readByAdmin, active: report.id === selectedId }"
+                :class="{ unread: !report.readByAdmin && report.status !== 'approved', active: report.id === selectedId, approved: report.status === 'approved' }"
                 @click="selectReport(report)"
               >
                 <div class="report-library-topline">
@@ -1524,12 +1541,12 @@ watch(activeSection, async section => {
           <div class="form-signatures">
             <div class="form-signature-box">
               <strong>Nhân viên khảo sát</strong>
-              <div v-if="employeeSignature?.imageData" class="form-signature-image">
-                <img :src="employeeSignature.imageData" alt="Chữ ký nhân viên" />
+              <div v-if="activeEmployeeSignature?.imageData" class="form-signature-image">
+                <img :src="activeEmployeeSignature.imageData" alt="Chữ ký nhân viên" />
               </div>
               <div v-else class="form-signature-missing">Chưa có chữ ký</div>
-              <b>{{ employeeSignature?.name || 'Nhân viên khảo sát' }}</b>
-              <span>{{ employeeSignature?.role || 'Khối kiểm tra bếp' }}</span>
+              <b>{{ activeEmployeeSignature?.name || 'Nhân viên khảo sát' }}</b>
+              <span>{{ activeEmployeeSignature?.role || 'Khối kiểm tra bếp' }}</span>
             </div>
 
             <div class="form-signature-box">
@@ -2478,6 +2495,22 @@ watch(activeSection, async section => {
 .report-library-item.active {
   border-color: #38bdf8;
   background: #eff6ff;
+}
+
+.report-library-item.approved {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+}
+
+.report-library-item.approved:hover,
+.report-library-item.approved.active {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+}
+
+.report-library-item.approved .report-library-topline span {
+  background: #bbf7d0;
+  color: #166534;
 }
 
 .report-library-item.unread::after {

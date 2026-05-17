@@ -10,6 +10,7 @@
 
           <div class="inputbox">
             <ion-icon name="mail-outline"></ion-icon>
+            <span class="floating-label">Email</span>
             <input
               id="email-input"
               v-model="email"
@@ -28,6 +29,7 @@
             >
               <ion-icon :name="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
             </button>
+            <span class="floating-label">Password</span>
             <input
               id="password-input"
               v-model="password"
@@ -48,7 +50,7 @@
             <span v-if="!isLoading">Log in</span>
             <span v-else class="loading-content">
               <span class="spinner"></span>
-              <span>Dang vao...</span>
+              <span>Đang đăng nhập...</span>
             </span>
           </button>
 
@@ -238,14 +240,14 @@ h2 {
   position: relative;
   display: flex;
   align-items: center;
-  margin: 30px 0;
+  margin: 26px 0;
   width: 100%;
   min-height: 52px;
   border-bottom: 2px solid #fff;
 }
 
 .inputbox input::placeholder {
-  color: rgba(255, 255, 255, 0.82);
+  color: transparent;
 }
 
 .inputbox input {
@@ -260,7 +262,7 @@ h2 {
   font-size: 1em;
   font-family: inherit;
   font-weight: 400;
-  padding: 8px 35px 8px 5px;
+  padding: 14px 35px 4px 5px;
   margin: 0;
   color: #fff;
   text-shadow: 0 1px 7px rgba(0, 0, 0, 0.72);
@@ -268,6 +270,33 @@ h2 {
   appearance: none;
   transform: translateY(0);
   transition: color 0.2s ease;
+}
+
+.floating-label {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1em;
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  text-shadow: 0 1px 7px rgba(0, 0, 0, 0.62);
+  transition:
+    top 0.18s ease,
+    transform 0.18s ease,
+    font-size 0.18s ease,
+    color 0.18s ease;
+}
+
+.inputbox:focus-within .floating-label,
+.inputbox:has(input:not(:placeholder-shown)) .floating-label {
+  top: 4px;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.78);
+  transform: translateY(0);
 }
 
 .inputbox input:-webkit-autofill,
@@ -471,7 +500,7 @@ button:disabled {
   }
 
   .inputbox {
-    margin: 18px 0;
+    margin: 16px 0;
     min-height: 48px;
   }
 
@@ -490,8 +519,17 @@ button:disabled {
   }
 
   .inputbox input::placeholder {
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: transparent;
+  }
+
+  .floating-label {
+    font-size: 0.98rem;
+  }
+
+  .inputbox:focus-within .floating-label,
+  .inputbox:has(input:not(:placeholder-shown)) .floating-label {
+    top: 3px;
+    font-size: 0.72rem;
   }
 
   .forget {
