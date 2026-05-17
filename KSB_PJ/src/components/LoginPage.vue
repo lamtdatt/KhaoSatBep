@@ -141,7 +141,7 @@ const handleLogin = async () => {
   padding: 24px;
   background-color: transparent;
   background-repeat: no-repeat;
-  background-position: center center;
+  background-position: center 42%;
   background-size: cover;
   font-family: 'Poppins', sans-serif;
   opacity: 0;
@@ -166,7 +166,7 @@ const handleLogin = async () => {
 .login-section.is-ready {
   opacity: 1;
   transform: translateY(0);
-  background-position: center center;
+  background-position: center 42%;
   background-size: cover;
 }
 
