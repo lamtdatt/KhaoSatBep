@@ -48,3 +48,10 @@ export const apiRequest = async (path, options = {}) => {
 
   return body
 }
+
+export const warmUpApi = () => {
+  fetch(`${API_BASE_URL}/health`, {
+    method: 'GET',
+    cache: 'no-store'
+  }).catch(() => null)
+}

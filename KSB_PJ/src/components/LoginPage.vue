@@ -46,7 +46,10 @@
 
           <button id="login-btn" type="submit" :disabled="isLoading">
             <span v-if="!isLoading">Log in</span>
-            <span v-else class="spinner"></span>
+            <span v-else class="loading-content">
+              <span class="spinner"></span>
+              <span>Dang vao...</span>
+            </span>
           </button>
 
           <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
@@ -59,7 +62,7 @@
 <script setup>
 import bannerHM from '@/assets/bannerHM.jpg'
 import logo from '@/assets/logo.png'
-import { apiRequest } from '@/utils/apiClient'
+import { apiRequest, warmUpApi } from '@/utils/apiClient'
 import { setAuthSession } from '@/utils/authStore'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -77,6 +80,8 @@ const errorMessage = ref('')
 const router = useRouter()
 
 onMounted(() => {
+  warmUpApi()
+
   const rememberedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY)
   if (rememberedEmail) {
     email.value = rememberedEmail
@@ -119,7 +124,6 @@ const handleLogin = async () => {
     }
 
     isLeaving.value = true
-    await new Promise(resolve => setTimeout(resolve, 360))
     await router.push(session.vaiTro === 'Admin' ? '/admin' : '/employee')
   } catch (error) {
     errorMessage.value = error.message || 'Dang nhap that bai'
@@ -388,6 +392,13 @@ button:disabled {
   border-top-color: #333;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+.loading-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .error-text {
