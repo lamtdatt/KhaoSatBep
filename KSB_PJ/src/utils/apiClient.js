@@ -1,6 +1,6 @@
 import { clearAuthSession, getAccessToken } from '@/utils/authStore'
 
-const DEFAULT_API_BASE_URL = 'https://khaosatbep-api.onrender.com/api'
+const DEFAULT_API_BASE_URL = 'https://khaosatbep-api.onrender.com'
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
 
@@ -19,7 +19,7 @@ const buildHeaders = customHeaders => {
 }
 
 export const apiRequest = async (path, options = {}) => {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}/api${path}`, {
     ...options,
     headers: buildHeaders(options.headers)
   })
