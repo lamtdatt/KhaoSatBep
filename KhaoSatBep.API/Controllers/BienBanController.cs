@@ -170,6 +170,8 @@ namespace KhaoSatBep.API.Controllers
         [HttpPost]
         public async Task<ActionResult<BienBanSummaryDto>> Create([FromBody] TaoBienBanDto dto)
         {
+            try
+            {
             var userId = GetUserId();
 
             // Validate loại biên bản
@@ -271,6 +273,17 @@ namespace KhaoSatBep.API.Controllers
             };
 
             return CreatedAtAction(nameof(GetById), new { id = bienBan.Id }, result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "Khong the tao bien ban",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    detail = ex.InnerException?.InnerException?.Message
+                });
+            }
         }
 
         // ============================

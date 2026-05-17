@@ -9,6 +9,12 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================
+// 0. PORT CHO RENDER
+// ============================
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+// ============================
 // 1. DATABASE (Supabase PostgreSQL)
 // ============================
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -19,7 +25,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // ============================
 // 2. JWT AUTHENTICATION
 // ============================
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("JWT Key chưa cấu hình!");
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new Exception("JWT Key chưa cấu hình!");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -29,9 +37,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 
@@ -50,16 +61,17 @@ var allowedOrigins = configuredOrigins
     ])
     .Distinct(StringComparer.OrdinalIgnoreCase)
     .ToArray();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueFrontend", policy =>
     {
         policy.SetIsOriginAllowed(origin =>
-              allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
-              Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-              uri.Host.EndsWith(".khaosatbep.io.vn", StringComparison.OrdinalIgnoreCase))
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+                allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
+                Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                uri.Host.EndsWith(".khaosatbep.io.vn", StringComparison.OrdinalIgnoreCase))
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -73,6 +85,7 @@ builder.Services.AddControllers();
 // 5. SWAGGER
 // ============================
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -82,7 +95,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API quản lý khảo sát bếp ăn"
     });
 
-    // Thêm JWT Authorization vào Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "Nhập JWT token theo định dạng: Bearer {token}",
@@ -97,28 +109,46 @@ builder.Services.AddSwaggerGen(c =>
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
             },
-            []
+            Array.Empty<string>()
         }
     });
 });
 
 // ============================
-var app = builder.Build();
+// BUILD APP
 // ============================
+var app = builder.Build();
 
+// ============================
+// 6. SWAGGER UI
+// ============================
 app.UseSwagger();
+
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "KhaoSatBep API v1");
     c.RoutePrefix = "swagger";
 });
 
+// ============================
+// 7. MIDDLEWARE
+// ============================
+
+// Không dùng dòng này trên Render để tránh lỗi:
+// Failed to determine the https port for redirect.
+// app.UseHttpsRedirection();
+
 app.UseCors("VueFrontend");
-app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapGet("/health", () => Results.Ok(new
 {
@@ -126,10 +156,14 @@ app.MapGet("/health", () => Results.Ok(new
     app = "KhaoSatBep.API",
     time = DateTimeOffset.UtcNow
 }));
+
 app.MapControllers();
 
-// Auto migrate database khi khởi động
+// ============================
+// 8. AUTO MIGRATE DATABASE
+// ============================
 var applyMigrationsOnStartup = app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup");
+
 if (applyMigrationsOnStartup)
 {
     using var scope = app.Services.CreateScope();
