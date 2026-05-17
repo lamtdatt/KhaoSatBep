@@ -139,9 +139,9 @@ const handleLogin = async () => {
   min-height: 100dvh;
   width: 100%;
   padding: 24px;
-  background-color: #dcecf8;
+  background-color: transparent;
   background-repeat: no-repeat;
-  background-position: center top;
+  background-position: center center;
   background-size: cover;
   font-family: 'Poppins', sans-serif;
   opacity: 0;
@@ -155,6 +155,7 @@ const handleLogin = async () => {
 
 .login-section::before {
   content: '';
+  display: none;
   position: fixed;
   inset: 0 0 auto;
   height: 18svh;
@@ -165,7 +166,7 @@ const handleLogin = async () => {
 .login-section.is-ready {
   opacity: 1;
   transform: translateY(0);
-  background-position: center top;
+  background-position: center center;
   background-size: cover;
 }
 
@@ -173,7 +174,7 @@ const handleLogin = async () => {
   position: relative;
   width: min(400px, 100%);
   min-height: 450px;
-  background: rgba(12, 29, 45, 0.2);
+  background: rgba(0, 0, 0, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   backdrop-filter: blur(5px);
@@ -413,11 +414,13 @@ button:disabled {
     min-height: 100svh;
     align-items: center;
     padding: max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+    background-color: #dcecf8;
     background-position: center top;
     background-size: cover;
   }
 
   .login-section::before {
+    display: block;
     height: 15svh;
     background: linear-gradient(180deg, #e8eef3 0%, rgba(216, 235, 249, 0.74) 54%, rgba(216, 235, 249, 0) 100%);
   }
