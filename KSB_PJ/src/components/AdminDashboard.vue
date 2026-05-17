@@ -34,7 +34,9 @@ const isSigningOut = ref(false)
 const isApprovingReport = ref(false)
 const toast = ref({
   visible: false,
-  message: ''
+  message: '',
+  type: 'success',
+  key: 0
 })
 
 let drawing = false
@@ -43,16 +45,43 @@ let toastTimer = null
 let introProgressTimer = null
 let introFinishTimer = null
 
-const showToast = message => {
+const showToast = (message, type = 'success') => {
+  window.clearTimeout(toastTimer)
+
   toast.value = {
+    ...toast.value,
+    visible: false
+  }
+
+  window.requestAnimationFrame(() => {
+    toast.value = {
+      key: Date.now(),
+      type,
+      message,
+      visible: true
+    }
+  })
+
+  toastTimer = window.setTimeout(() => {
+    toast.value = {
+      ...toast.value,
+      visible: false
+    }
+  }, 4500)
+}
+
+const showApprovalToast = () => {
+  toast.value = {
+    key: Date.now(),
+    type: 'success',
+    message: 'Đã duyệt biên bản thành công.',
     visible: true,
-    message
   }
 
   window.clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => {
     toast.value.visible = false
-  }, 2800)
+  }, 4500)
 }
 
 const logout = async () => {
@@ -474,11 +503,11 @@ const approveReport = async () => {
     if (updated) {
       selectedReport.value = structuredClone(updated)
       applyReportsFromCache()
-      showToast('Đã duyệt biên bản thành công.')
+      showApprovalToast()
     }
   } catch (error) {
     console.error('Khong the duyet bien ban:', error)
-    showToast(error.message || 'Không thể duyệt biên bản. Vui lòng thử lại.')
+    showToast(error.message || 'Không thể duyệt biên bản. Vui lòng thử lại.', 'info')
   } finally {
     isApprovingReport.value = false
   }
@@ -1035,7 +1064,7 @@ watch(activeSection, async section => {
 
 <template>
   <div class="admin-layout" :class="{ 'intro-finished': !isAdminIntroLoading, 'is-signing-out': isSigningOut }">
-    <AppToast :visible="toast.visible" :message="toast.message" />
+    <AppToast :key="toast.key" :visible="toast.visible" :message="toast.message" :type="toast.type" />
     <button
       v-show="showMobileBackTop"
       type="button"

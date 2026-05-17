@@ -16,12 +16,14 @@ defineProps({
 </script>
 
 <template>
-  <transition name="toast">
-    <div v-if="visible" class="app-toast" :class="type" role="status" aria-live="polite">
-      <ion-icon :name="type === 'success' ? 'checkmark-circle-outline' : 'information-circle-outline'"></ion-icon>
-      <span>{{ message }}</span>
-    </div>
-  </transition>
+  <Teleport to="body">
+    <transition name="toast">
+      <div v-if="visible" class="app-toast" :class="type" role="status" aria-live="polite">
+        <ion-icon :name="type === 'success' ? 'checkmark-circle-outline' : 'information-circle-outline'"></ion-icon>
+        <span>{{ message }}</span>
+      </div>
+    </transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -29,7 +31,7 @@ defineProps({
   position: fixed;
   top: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 2147483647;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -47,6 +49,12 @@ defineProps({
   border: 2px solid #22c55e;
   background: rgba(240, 253, 244, 0.97);
   color: #14532d;
+}
+
+.app-toast.info {
+  border: 2px solid #38bdf8;
+  background: rgba(240, 249, 255, 0.98);
+  color: #075985;
 }
 
 .app-toast ion-icon {
