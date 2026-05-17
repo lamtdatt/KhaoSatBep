@@ -340,7 +340,6 @@ export const updateReport = async (id, patch) => {
     })
 
     const report = await getReportById(id)
-    await refreshReports()
     return report
   }
 

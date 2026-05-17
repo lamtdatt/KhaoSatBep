@@ -31,6 +31,7 @@ const isAdminIntroLoading = ref(true)
 const adminIntroProgress = ref(8)
 const showMobileBackTop = ref(false)
 const isSigningOut = ref(false)
+const isApprovingReport = ref(false)
 const toast = ref({
   visible: false,
   message: ''
@@ -97,8 +98,7 @@ const reportTypeLabels = {
   SuatAnNguoiBenh: 'Suất ăn người bệnh'
 }
 
-const loadReports = async () => {
-  await refreshReports()
+const applyReportsFromCache = () => {
   const nextReports = getReports()
   reports.value = nextReports
 
@@ -113,6 +113,11 @@ const loadReports = async () => {
     }
     return
   }
+}
+
+const loadReports = async () => {
+  await refreshReports()
+  applyReportsFromCache()
 }
 
 const activeReport = computed(() => {
@@ -454,19 +459,28 @@ const saveEdits = () => {
 }
 
 const approveReport = async () => {
-  if (!activeReport.value) {
+  if (!activeReport.value || isApprovingReport.value) {
     return
   }
 
-  const updated = await updateReport(activeReport.value.id, {
-    status: 'approved',
-    approvedAt: new Date().toISOString()
-  })
+  isApprovingReport.value = true
 
-  if (updated) {
-    selectedReport.value = structuredClone(updated)
-    await loadReports()
-    showToast('Đã duyệt biên bản thành công.')
+  try {
+    const updated = await updateReport(activeReport.value.id, {
+      status: 'approved',
+      approvedAt: new Date().toISOString()
+    })
+
+    if (updated) {
+      selectedReport.value = structuredClone(updated)
+      applyReportsFromCache()
+      showToast('Đã duyệt biên bản thành công.')
+    }
+  } catch (error) {
+    console.error('Khong the duyet bien ban:', error)
+    showToast(error.message || 'Không thể duyệt biên bản. Vui lòng thử lại.')
+  } finally {
+    isApprovingReport.value = false
   }
 }
 
@@ -992,7 +1006,7 @@ onMounted(async () => {
   updateMobileBackTop()
   window.addEventListener('scroll', updateMobileBackTop, { passive: true })
   window.addEventListener('resize', updateMobileBackTop)
-  window.addEventListener('ksb-reports-updated', loadReports)
+  window.addEventListener('ksb-reports-updated', applyReportsFromCache)
 })
 
 onUnmounted(() => {
@@ -1002,7 +1016,7 @@ onUnmounted(() => {
   window.clearTimeout(introFinishTimer)
   window.removeEventListener('scroll', updateMobileBackTop)
   window.removeEventListener('resize', updateMobileBackTop)
-  window.removeEventListener('ksb-reports-updated', loadReports)
+  window.removeEventListener('ksb-reports-updated', applyReportsFromCache)
 })
 
 watch(activeSection, async section => {
@@ -1501,7 +1515,15 @@ watch(activeSection, async section => {
           </div>
 
           <div class="action-row">
-            <button v-if="activeReport.status !== 'approved'" type="button" class="btn approve" @click="approveReport">Duyệt biên bản</button>
+            <button
+              v-if="activeReport.status !== 'approved'"
+              type="button"
+              class="btn approve"
+              :disabled="isApprovingReport"
+              @click="approveReport"
+            >
+              {{ isApprovingReport ? 'Đang duyệt...' : 'Duyệt biên bản' }}
+            </button>
             <button type="button" class="btn primary" @click="exportPdfAdvanced">Xuất PDF</button>
           </div>
         </div>

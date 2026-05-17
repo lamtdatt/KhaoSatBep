@@ -31,6 +31,10 @@ const typeLabels = Object.fromEntries(reportTypes.map(item => [item.type, item.l
 
 const loadReports = async () => {
   await refreshReports()
+  syncReportsFromCache()
+}
+
+const syncReportsFromCache = () => {
   reports.value = getReports()
 }
 
@@ -166,13 +170,13 @@ const maxValue = computed(() => Math.max(...overviewStats.value.map(item => item
 
 onMounted(() => {
   loadReports()
-  window.addEventListener('ksb-reports-updated', loadReports)
-  window.addEventListener('storage', loadReports)
+  window.addEventListener('ksb-reports-updated', syncReportsFromCache)
+  window.addEventListener('storage', syncReportsFromCache)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('ksb-reports-updated', loadReports)
-  window.removeEventListener('storage', loadReports)
+  window.removeEventListener('ksb-reports-updated', syncReportsFromCache)
+  window.removeEventListener('storage', syncReportsFromCache)
 })
 </script>
 
