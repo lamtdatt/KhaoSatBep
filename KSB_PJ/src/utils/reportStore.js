@@ -2,6 +2,7 @@ import { apiRequest } from '@/utils/apiClient'
 
 const REPORTS_KEY = 'ksb_submitted_reports'
 const REPORT_META_KEY = 'ksb_report_meta'
+const EMPLOYEE_APPROVED_READ_KEY = 'ksb_employee_approved_read_ids'
 
 const FRONTEND_REPORT_TYPES = {
   CSHT: 'CoSoHaTang',
@@ -50,6 +51,8 @@ const readReports = () => parseJson(REPORTS_KEY, [])
 
 const readMeta = () => parseJson(REPORT_META_KEY, {})
 
+const readEmployeeApprovedReadIds = () => parseJson(EMPLOYEE_APPROVED_READ_KEY, [])
+
 const writeReports = reports => {
   writeJson(REPORTS_KEY, reports)
   window.dispatchEvent(new CustomEvent('ksb-reports-updated'))
@@ -57,6 +60,11 @@ const writeReports = reports => {
 
 const writeMeta = meta => {
   writeJson(REPORT_META_KEY, meta)
+}
+
+const writeEmployeeApprovedReadIds = ids => {
+  writeJson(EMPLOYEE_APPROVED_READ_KEY, [...new Set(ids.map(String))])
+  window.dispatchEvent(new CustomEvent('ksb-employee-notifications-updated'))
 }
 
 const mergeMeta = report => {
@@ -347,6 +355,20 @@ export const updateReport = async (id, patch) => {
 export const markReportRead = async id => {
   applyMetaPatch(id, { readByAdmin: true })
   return getReports().find(report => String(report.id) === String(id)) || null
+}
+
+export const getUnreadApprovedReports = (reports = readReports()) => {
+  const readIds = new Set(readEmployeeApprovedReadIds().map(String))
+  return reports.filter(report => report.status === 'approved' && !readIds.has(String(report.id)))
+}
+
+export const markApprovedReportsSeen = (reports = readReports()) => {
+  const currentReadIds = readEmployeeApprovedReadIds().map(String)
+  const approvedIds = reports
+    .filter(report => report.status === 'approved')
+    .map(report => String(report.id))
+
+  writeEmployeeApprovedReadIds([...currentReadIds, ...approvedIds])
 }
 
 export const getReportStats = report => {

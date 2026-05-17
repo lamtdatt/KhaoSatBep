@@ -2,12 +2,16 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { clearAuthSession, getCurrentUser } from '@/utils/authStore'
+import { getReports, getUnreadApprovedReports, markApprovedReportsSeen, refreshReports } from '@/utils/reportStore'
 
 const router = useRouter()
 const route = useRoute()
 const contentAreaRef = ref(null)
 const isDashboardReady = ref(false)
+const isSigningOut = ref(false)
 const showMobileBackTop = ref(false)
+const approvedNotificationCount = ref(0)
+let notificationTimer = null
 
 const user = ref({
   name: 'Nhân viên khảo sát',
@@ -73,9 +77,38 @@ const isActive = item => {
   return route.path.startsWith(item.to)
 }
 
-const logout = () => {
+const updateApprovedNotificationCount = () => {
+  approvedNotificationCount.value = getUnreadApprovedReports(getReports()).length
+}
+
+const refreshApprovedNotifications = async () => {
+  try {
+    await refreshReports()
+  } catch (error) {
+    console.error('Khong the tai thong bao nhan vien:', error)
+  } finally {
+    updateApprovedNotificationCount()
+  }
+}
+
+const openNotifications = () => {
+  if (approvedNotificationCount.value > 0) {
+    markApprovedReportsSeen(getReports())
+    updateApprovedNotificationCount()
+  }
+
+  router.push('/employee')
+}
+
+const logout = async () => {
+  if (isSigningOut.value) {
+    return
+  }
+
+  isSigningOut.value = true
+  await new Promise(resolve => window.setTimeout(resolve, 320))
   clearAuthSession()
-  router.push('/login')
+  await router.replace('/login')
 }
 
 const updateMobileBackTop = () => {
@@ -103,14 +136,21 @@ onMounted(() => {
     isDashboardReady.value = true
   })
   updateMobileBackTop()
+  refreshApprovedNotifications()
+  notificationTimer = window.setInterval(refreshApprovedNotifications, 30000)
   window.addEventListener('scroll', updateMobileBackTop, { passive: true })
   window.addEventListener('resize', updateMobileBackTop)
+  window.addEventListener('ksb-reports-updated', updateApprovedNotificationCount)
+  window.addEventListener('ksb-employee-notifications-updated', updateApprovedNotificationCount)
 })
 
 onUnmounted(() => {
   document.body.classList.remove('employee-page-scroll')
+  window.clearInterval(notificationTimer)
   window.removeEventListener('scroll', updateMobileBackTop)
   window.removeEventListener('resize', updateMobileBackTop)
+  window.removeEventListener('ksb-reports-updated', updateApprovedNotificationCount)
+  window.removeEventListener('ksb-employee-notifications-updated', updateApprovedNotificationCount)
 })
 
 watch(
@@ -124,7 +164,7 @@ watch(
 </script>
 
 <template>
-  <div class="dashboard-layout" :class="{ 'is-ready': isDashboardReady }">
+  <div class="dashboard-layout" :class="{ 'is-ready': isDashboardReady, 'is-signing-out': isSigningOut }">
     <button
       v-show="showMobileBackTop"
       type="button"
@@ -191,8 +231,17 @@ watch(
             <input id="dashboard-search" type="text" placeholder="Tìm kiếm biên bản, khoa phòng..." />
           </label>
 
-          <button class="icon-btn" type="button" aria-label="Thông báo">
+          <button
+            class="icon-btn notification-btn"
+            :class="{ 'has-unread': approvedNotificationCount > 0 }"
+            type="button"
+            :aria-label="`Thông báo: ${approvedNotificationCount} biên bản đã duyệt mới`"
+            @click="openNotifications"
+          >
             <ion-icon name="notifications-outline"></ion-icon>
+            <span v-if="approvedNotificationCount > 0" class="notification-badge">
+              {{ approvedNotificationCount > 9 ? '9+' : approvedNotificationCount }}
+            </span>
           </button>
         </div>
       </header>
@@ -224,6 +273,17 @@ watch(
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 30%),
     linear-gradient(180deg, #f5f9fd 0%, #edf4fb 100%);
   color: #0f172a;
+  transition:
+    opacity 0.32s ease,
+    transform 0.36s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.36s ease;
+}
+
+.dashboard-layout.is-signing-out {
+  opacity: 0;
+  transform: translateY(14px) scale(0.985);
+  filter: blur(5px);
+  pointer-events: none;
 }
 
 .mobile-back-top {
@@ -502,6 +562,7 @@ watch(
 }
 
 .icon-btn {
+  position: relative;
   width: 46px;
   height: 46px;
   display: inline-flex;
@@ -524,6 +585,43 @@ watch(
 
 .icon-btn ion-icon {
   font-size: 1.2rem;
+}
+
+.notification-btn.has-unread {
+  color: #0284c7;
+  box-shadow: 0 16px 30px rgba(14, 165, 233, 0.16);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.32);
+  animation: notificationPulse 1.35s ease-in-out infinite;
+}
+
+@keyframes notificationPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .content-area {

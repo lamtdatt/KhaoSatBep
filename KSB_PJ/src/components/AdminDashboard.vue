@@ -30,6 +30,7 @@ const canvasRef = ref(null)
 const isAdminIntroLoading = ref(true)
 const adminIntroProgress = ref(8)
 const showMobileBackTop = ref(false)
+const isSigningOut = ref(false)
 const toast = ref({
   visible: false,
   message: ''
@@ -53,9 +54,15 @@ const showToast = message => {
   }, 2800)
 }
 
-const logout = () => {
+const logout = async () => {
+  if (isSigningOut.value) {
+    return
+  }
+
+  isSigningOut.value = true
+  await new Promise(resolve => window.setTimeout(resolve, 320))
   clearAuthSession()
-  router.push('/login')
+  await router.replace('/login')
 }
 
 const startAdminIntro = () => {
@@ -1013,7 +1020,7 @@ watch(activeSection, async section => {
 </script>
 
 <template>
-  <div class="admin-layout" :class="{ 'intro-finished': !isAdminIntroLoading }">
+  <div class="admin-layout" :class="{ 'intro-finished': !isAdminIntroLoading, 'is-signing-out': isSigningOut }">
     <AppToast :visible="toast.visible" :message="toast.message" />
     <button
       v-show="showMobileBackTop"
@@ -1559,6 +1566,17 @@ watch(activeSection, async section => {
   min-height: 100dvh;
   background: #eef5fb;
   color: #0f172a;
+  transition:
+    opacity 0.32s ease,
+    transform 0.36s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.36s ease;
+}
+
+.admin-layout.is-signing-out {
+  opacity: 0;
+  transform: translateY(14px) scale(0.985);
+  filter: blur(5px);
+  pointer-events: none;
 }
 
 .mobile-back-top {
