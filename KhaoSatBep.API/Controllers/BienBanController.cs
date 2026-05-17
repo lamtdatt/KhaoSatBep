@@ -183,7 +183,8 @@ namespace KhaoSatBep.API.Controllers
             {
                 SoBienBan = dto.SoBienBan,
                 LoaiBienBan = dto.LoaiBienBan,
-                NgayKiemTra = dto.NgayKiemTra,
+                NgayKiemTra = ToUtc(dto.NgayKiemTra),
+                NgayTao = DateTime.UtcNow,
                 TrangThai = "ChuaGui",
                 GopYKhoaDinhDuong = dto.GopYKhoaDinhDuong,
                 YKienBPCB = dto.YKienBPCB,
@@ -314,13 +315,13 @@ namespace KhaoSatBep.API.Controllers
 
             // Cập nhật header
             bienBan.SoBienBan = dto.SoBienBan;
-            bienBan.NgayKiemTra = dto.NgayKiemTra;
+            bienBan.NgayKiemTra = ToUtc(dto.NgayKiemTra);
             bienBan.GopYKhoaDinhDuong = dto.GopYKhoaDinhDuong;
             bienBan.YKienBPCB = dto.YKienBPCB;
             bienBan.BuaAnDuongMieng = dto.BuaAnDuongMieng;
             bienBan.ThucDonHangNgay = dto.ThucDonHangNgay;
             bienBan.BuaAnOngThong = dto.BuaAnOngThong;
-            bienBan.NgayCapNhat = DateTime.Now;
+            bienBan.NgayCapNhat = DateTime.UtcNow;
 
             // Xóa cũ, thêm mới (replace strategy)
             _context.ThanhPhanKiemTras.RemoveRange(bienBan.ThanhPhans);
@@ -372,7 +373,7 @@ namespace KhaoSatBep.API.Controllers
                 return BadRequest(new { message = "Biên bản này không thể gửi lại" });
 
             bienBan.TrangThai = "DaGui";
-            bienBan.NgayCapNhat = DateTime.Now;
+            bienBan.NgayCapNhat = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đã gửi biên bản thành công" });
@@ -394,7 +395,7 @@ namespace KhaoSatBep.API.Controllers
                 return BadRequest(new { message = "Trạng thái không hợp lệ. Chấp nhận: DaDuyet, TuChoi" });
 
             bienBan.TrangThai = dto.TrangThai;
-            bienBan.NgayCapNhat = DateTime.Now;
+            bienBan.NgayCapNhat = DateTime.UtcNow;
 
             // Nếu từ chối thì thêm ghi chú lý do
             if (!string.IsNullOrEmpty(dto.GhiChu))
@@ -440,6 +441,16 @@ namespace KhaoSatBep.API.Controllers
         private string GetUserRole()
         {
             return User.FindFirst(ClaimTypes.Role)?.Value ?? "NguoiDung";
+        }
+
+        private static DateTime ToUtc(DateTime value)
+        {
+            return value.Kind switch
+            {
+                DateTimeKind.Utc => value,
+                DateTimeKind.Local => value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            };
         }
     }
 }

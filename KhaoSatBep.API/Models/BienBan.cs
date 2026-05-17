@@ -13,7 +13,7 @@ namespace KhaoSatBep.API.Models
         public string TrangThai { get; set; } = "ChuaGui"; // ChuaGui, DaGui, DaDuyet, TuChoi
         public string? GopYKhoaDinhDuong { get; set; } // Góp ý, nhắc nhở của Khoa Dinh dưỡng
         public string? YKienBPCB { get; set; } // Ý kiến của BPCB & CCSA
-        public DateTime NgayTao { get; set; } = DateTime.Now;
+        public DateTime NgayTao { get; set; } = DateTime.UtcNow;
         public DateTime? NgayCapNhat { get; set; }
 
         // Foreign Key - Người tạo biên bản

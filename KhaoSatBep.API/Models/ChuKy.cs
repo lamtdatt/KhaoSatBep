@@ -11,7 +11,7 @@ namespace KhaoSatBep.API.Models
         public string TenNguoiKy { get; set; } = string.Empty;
         public string ChucVuNguoiKy { get; set; } = string.Empty;
         public string DuLieuChuKy { get; set; } = string.Empty; // Base64 encoded canvas image (data:image/png;base64,...)
-        public DateTime NgayKy { get; set; } = DateTime.Now;
+        public DateTime NgayKy { get; set; } = DateTime.UtcNow;
 
         // Foreign Key
         public int BienBanId { get; set; }

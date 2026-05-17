@@ -7,7 +7,7 @@ namespace KhaoSatBep.API.Models
         public DateTime NgayKhaoSat { get; set; }
         public string TrangThai { get; set; } = "ChoDuyet"; // ChoDuyet, DaDuyet, TuChoi
         public string? GhiChu { get; set; }
-        public DateTime NgayTao { get; set; } = DateTime.Now;
+        public DateTime NgayTao { get; set; } = DateTime.UtcNow;
 
         // Foreign Keys
         public int BepId { get; set; }

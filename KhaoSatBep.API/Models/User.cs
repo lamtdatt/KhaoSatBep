@@ -7,7 +7,7 @@ namespace KhaoSatBep.API.Models
         public string Email { get; set; } = string.Empty;
         public string MatKhauHash { get; set; } = string.Empty;
         public string VaiTro { get; set; } = "NguoiDung"; // Admin, NguoiDung
-        public DateTime NgayTao { get; set; } = DateTime.Now;
+        public DateTime NgayTao { get; set; } = DateTime.UtcNow;
 
         // Navigation
         public ICollection<KhaoSat> KhaoSats { get; set; } = new List<KhaoSat>();
