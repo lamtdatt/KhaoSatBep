@@ -108,6 +108,13 @@ app.UseHttpsRedirection();
 app.UseCors("VueFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    app = "KhaoSatBep.API",
+    time = DateTimeOffset.UtcNow
+}));
 app.MapControllers();
 
 // Auto migrate database khi khởi động
