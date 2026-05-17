@@ -40,15 +40,26 @@ builder.Services.AddAuthorization();
 // ============================
 // 3. CORS (cho phép Vue frontend)
 // ============================
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
+var configuredOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
+var allowedOrigins = configuredOrigins
+    .Concat([
+        "https://khaosatbep.io.vn",
+        "https://www.khaosatbep.io.vn",
+        "http://localhost:5173",
+        "http://localhost:3000"
+    ])
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.SetIsOriginAllowed(origin =>
+              allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
+              Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+              uri.Host.EndsWith(".khaosatbep.io.vn", StringComparison.OrdinalIgnoreCase))
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
@@ -104,8 +115,8 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-app.UseHttpsRedirection();
 app.UseCors("VueFrontend");
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/", () => Results.Redirect("/swagger"));
