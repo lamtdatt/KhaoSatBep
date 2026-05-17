@@ -68,6 +68,12 @@ const router = createRouter({
   routes
 })
 
+const DYNAMIC_IMPORT_RELOAD_KEY = 'ksb_dynamic_import_reload'
+const isDynamicImportError = error => {
+  const message = String(error?.message || error || '')
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(message)
+}
+
 router.beforeEach((to, from, next) => {
   const loggedIn = isAuthenticated()
   const currentUser = getCurrentUser()
@@ -93,6 +99,23 @@ router.beforeEach((to, from, next) => {
   }
 
   next()
+})
+
+router.afterEach(() => {
+  window.sessionStorage.removeItem(DYNAMIC_IMPORT_RELOAD_KEY)
+})
+
+router.onError(error => {
+  if (!isDynamicImportError(error)) {
+    return
+  }
+
+  if (window.sessionStorage.getItem(DYNAMIC_IMPORT_RELOAD_KEY) === '1') {
+    return
+  }
+
+  window.sessionStorage.setItem(DYNAMIC_IMPORT_RELOAD_KEY, '1')
+  window.location.reload()
 })
 
 export default router

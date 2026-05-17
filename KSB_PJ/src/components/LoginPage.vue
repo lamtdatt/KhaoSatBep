@@ -430,6 +430,11 @@ button:disabled {
     background-size: cover;
   }
 
+  .login-section.is-ready {
+    background-position: center top;
+    background-size: cover;
+  }
+
   .login-section::before {
     display: block;
     height: 15svh;
