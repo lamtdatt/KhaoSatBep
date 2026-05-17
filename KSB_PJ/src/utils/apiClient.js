@@ -1,6 +1,6 @@
 import { clearAuthSession, getAccessToken } from '@/utils/authStore'
 
-const DEFAULT_API_BASE_URL = 'http://localhost:5264/api'
+const DEFAULT_API_BASE_URL = 'https://khaosatbep-api.onrender.com/api'
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
 
