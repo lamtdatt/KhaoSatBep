@@ -4,6 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { clearAuthSession, getCurrentUser } from '@/utils/authStore'
 import { getReports, getUnreadApprovedReports, markApprovedReportsSeen, refreshReports } from '@/utils/reportStore'
 
+const REPORT_TYPE_LABELS = {
+  CoSoHaTang: 'Cơ sở hạ tầng',
+  HoSo: 'Hồ sơ sổ sách',
+  VeSinh: 'Vệ sinh ATTP',
+  SuatAnNguoiBenh: 'Suất ăn người bệnh'
+}
+
 const router = useRouter()
 const route = useRoute()
 const contentAreaRef = ref(null)
@@ -11,6 +18,9 @@ const isDashboardReady = ref(false)
 const isSigningOut = ref(false)
 const showMobileBackTop = ref(false)
 const approvedNotificationCount = ref(0)
+const showNotificationDropdown = ref(false)
+const notificationList = ref([])
+const notificationDropdownRef = ref(null)
 let notificationTimer = null
 
 const user = ref({
@@ -91,13 +101,61 @@ const refreshApprovedNotifications = async () => {
   }
 }
 
+const formatNotificationTime = value => {
+  if (!value) return ''
+  return new Date(value).toLocaleString('vi-VN')
+}
+
 const openNotifications = () => {
-  if (approvedNotificationCount.value > 0) {
-    markApprovedReportsSeen(getReports())
-    updateApprovedNotificationCount()
+  const reports = getReports()
+  const unread = getUnreadApprovedReports(reports)
+
+  // Build notification list from unread approved reports
+  if (unread.length > 0) {
+    notificationList.value = unread.map(report => ({
+      id: report.id,
+      soBienBan: report.soBienBan,
+      loaiBienBan: REPORT_TYPE_LABELS[report.loaiBienBan] || report.loaiBienBan,
+      time: formatNotificationTime(report.submittedAt || report.updatedAt),
+      message: `Admin đã duyệt biên bản ${report.soBienBan} và không có đánh giá gì thêm.`
+    }))
+  } else {
+    // Show already read approved reports as history
+    const approved = reports.filter(r => r.status === 'approved').slice(0, 10)
+    notificationList.value = approved.map(report => ({
+      id: report.id,
+      soBienBan: report.soBienBan,
+      loaiBienBan: REPORT_TYPE_LABELS[report.loaiBienBan] || report.loaiBienBan,
+      time: formatNotificationTime(report.submittedAt || report.updatedAt),
+      message: `Admin đã duyệt biên bản ${report.soBienBan} và không có đánh giá gì thêm.`,
+      read: true
+    }))
   }
 
+  showNotificationDropdown.value = !showNotificationDropdown.value
+
+  // Mark as read after opening
+  if (showNotificationDropdown.value && unread.length > 0) {
+    markApprovedReportsSeen(reports)
+    updateApprovedNotificationCount()
+  }
+}
+
+const closeNotificationDropdown = () => {
+  showNotificationDropdown.value = false
+}
+
+const onNotificationClick = (notification) => {
+  showNotificationDropdown.value = false
   router.push('/employee')
+}
+
+const handleClickOutside = (event) => {
+  const dropdown = notificationDropdownRef.value
+  const btn = event.target.closest('.notification-btn')
+  if (dropdown && !dropdown.contains(event.target) && !btn) {
+    showNotificationDropdown.value = false
+  }
 }
 
 const logout = async () => {
@@ -142,6 +200,7 @@ onMounted(() => {
   window.addEventListener('resize', updateMobileBackTop)
   window.addEventListener('ksb-reports-updated', updateApprovedNotificationCount)
   window.addEventListener('ksb-employee-notifications-updated', updateApprovedNotificationCount)
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
@@ -151,6 +210,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateMobileBackTop)
   window.removeEventListener('ksb-reports-updated', updateApprovedNotificationCount)
   window.removeEventListener('ksb-employee-notifications-updated', updateApprovedNotificationCount)
+  document.removeEventListener('click', handleClickOutside)
 })
 
 watch(
@@ -231,18 +291,63 @@ watch(
             <input id="dashboard-search" type="text" placeholder="Tìm kiếm biên bản, khoa phòng..." />
           </label>
 
-          <button
-            class="icon-btn notification-btn"
-            :class="{ 'has-unread': approvedNotificationCount > 0 }"
-            type="button"
-            :aria-label="`Thông báo: ${approvedNotificationCount} biên bản đã duyệt mới`"
-            @click="openNotifications"
-          >
-            <ion-icon name="notifications-outline"></ion-icon>
-            <span v-if="approvedNotificationCount > 0" class="notification-badge">
-              {{ approvedNotificationCount > 9 ? '9+' : approvedNotificationCount }}
-            </span>
-          </button>
+          <div class="notification-wrapper">
+            <button
+              class="icon-btn notification-btn"
+              :class="{ 'has-unread': approvedNotificationCount > 0 }"
+              type="button"
+              :aria-label="`Thông báo: ${approvedNotificationCount} biên bản đã duyệt mới`"
+              @click="openNotifications"
+            >
+              <ion-icon name="notifications-outline"></ion-icon>
+              <span v-if="approvedNotificationCount > 0" class="notification-badge">
+                {{ approvedNotificationCount > 9 ? '9+' : approvedNotificationCount }}
+              </span>
+            </button>
+
+            <transition name="dropdown">
+              <div
+                v-if="showNotificationDropdown"
+                ref="notificationDropdownRef"
+                class="notification-dropdown"
+              >
+                <div class="notification-dropdown-header">
+                  <ion-icon name="notifications" class="noti-header-icon"></ion-icon>
+                  <span>Thông báo</span>
+                </div>
+
+                <div v-if="notificationList.length" class="notification-dropdown-list">
+                  <div
+                    v-for="noti in notificationList"
+                    :key="noti.id"
+                    class="notification-dropdown-item"
+                    :class="{ 'is-read': noti.read }"
+                    @click="onNotificationClick(noti)"
+                  >
+                    <div class="noti-icon-wrap">
+                      <ion-icon name="checkmark-done-circle" class="noti-icon"></ion-icon>
+                    </div>
+                    <div class="noti-content">
+                      <div class="noti-title">
+                        <strong>{{ noti.loaiBienBan }}</strong>
+                        <span class="noti-bb">{{ noti.soBienBan }}</span>
+                      </div>
+                      <p class="noti-message">{{ noti.message }}</p>
+                      <span class="noti-time">
+                        <ion-icon name="time-outline"></ion-icon>
+                        {{ noti.time }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else class="notification-dropdown-empty">
+                  <ion-icon name="checkmark-circle-outline"></ion-icon>
+                  <p>Không có thông báo mới</p>
+                </div>
+              </div>
+            </transition>
+          </div>
         </div>
       </header>
 
@@ -587,6 +692,10 @@ watch(
   font-size: 1.2rem;
 }
 
+.notification-wrapper {
+  position: relative;
+}
+
 .notification-btn.has-unread {
   color: #0284c7;
   box-shadow: 0 16px 30px rgba(14, 165, 233, 0.16);
@@ -622,6 +731,182 @@ watch(
   50% {
     transform: scale(1.1);
   }
+}
+
+/* Notification Dropdown */
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 100;
+  width: 400px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  box-shadow:
+    0 25px 60px rgba(15, 23, 42, 0.15),
+    0 8px 20px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.notification-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+}
+
+.noti-header-icon {
+  font-size: 1.3rem;
+  color: #0284c7;
+}
+
+.notification-dropdown-header span {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notification-dropdown-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.notification-dropdown-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.notification-dropdown-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.notification-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.notification-dropdown-item:hover {
+  background: linear-gradient(135deg, #f0f9ff, #f8fbff);
+  transform: translateX(2px);
+}
+
+.notification-dropdown-item.is-read {
+  opacity: 0.6;
+}
+
+.noti-icon-wrap {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  flex-shrink: 0;
+}
+
+.noti-icon {
+  font-size: 1.3rem;
+  color: #16a34a;
+}
+
+.noti-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.noti-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.noti-title strong {
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.noti-bb {
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #0369a1;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.noti-message {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.noti-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.noti-time ion-icon {
+  font-size: 0.85rem;
+}
+
+.notification-dropdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: #64748b;
+}
+
+.notification-dropdown-empty ion-icon {
+  font-size: 2.4rem;
+  color: #10b981;
+}
+
+.notification-dropdown-empty p {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+/* Dropdown transition */
+.dropdown-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+}
+
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
 }
 
 .content-area {
@@ -667,6 +952,10 @@ watch(
 }
 
 @media (max-width: 1180px) {
+  .notification-dropdown {
+    width: 340px;
+  }
+
   .dashboard-layout {
     grid-template-columns: 240px minmax(0, 1fr);
   }
