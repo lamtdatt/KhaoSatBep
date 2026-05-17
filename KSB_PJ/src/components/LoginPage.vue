@@ -140,7 +140,7 @@ const handleLogin = async () => {
   width: 100%;
   padding: 24px;
   background: no-repeat;
-  background-position: center -48px;
+  background-position: center top;
   background-size: cover;
   font-family: 'Poppins', sans-serif;
   opacity: 0;
@@ -155,7 +155,7 @@ const handleLogin = async () => {
 .login-section.is-ready {
   opacity: 1;
   transform: translateY(0);
-  background-position: center;
+  background-position: center top;
   background-size: cover;
 }
 
@@ -163,7 +163,7 @@ const handleLogin = async () => {
   position: relative;
   width: min(400px, 100%);
   min-height: 450px;
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(12, 29, 45, 0.2);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   backdrop-filter: blur(5px);
@@ -230,7 +230,7 @@ h2 {
 }
 
 .inputbox input::placeholder {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .inputbox input {
@@ -248,6 +248,7 @@ h2 {
   padding: 8px 35px 8px 5px;
   margin: 0;
   color: #fff;
+  text-shadow: 0 1px 7px rgba(0, 0, 0, 0.72);
   -webkit-appearance: none;
   appearance: none;
   transform: translateY(0);
@@ -331,6 +332,7 @@ button {
   height: 40px;
   border-radius: 40px;
   background: #fff;
+  color: #06202f;
   border: none;
   outline: none;
   cursor: pointer;
@@ -341,6 +343,12 @@ button {
   justify-content: center;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+button span {
+  color: #06202f;
+  font-weight: 700;
+  text-shadow: none;
 }
 
 form {
@@ -395,7 +403,7 @@ button:disabled {
     min-height: 100svh;
     align-items: center;
     padding: max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
-    background-position: center;
+    background-position: center top;
     background-size: cover;
   }
 
@@ -404,8 +412,10 @@ button:disabled {
     min-height: auto;
     padding: 26px 0 28px;
     border-radius: 18px;
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    background: rgba(11, 28, 44, 0.24);
+    backdrop-filter: blur(4px) saturate(1.08);
+    -webkit-backdrop-filter: blur(4px) saturate(1.08);
+    box-shadow: 0 18px 45px rgba(4, 18, 30, 0.18);
   }
 
   .form-value {
@@ -434,6 +444,20 @@ button:disabled {
   .inputbox input {
     height: 42px;
     font-size: 0.98rem;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.78);
+  }
+
+  .inputbox input:not(:placeholder-shown) {
+    padding-left: 10px;
+    border-radius: 10px 10px 0 0;
+    background: rgba(5, 19, 31, 0.16);
+  }
+
+  .inputbox input::placeholder {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
   }
 
   .forget {
@@ -446,6 +470,9 @@ button:disabled {
   button {
     height: 46px;
     font-size: 1rem;
+    color: #06202f;
+    background: linear-gradient(180deg, #ffffff 0%, #eef9fc 100%);
+    box-shadow: 0 10px 22px rgba(3, 23, 35, 0.28);
   }
 }
 
