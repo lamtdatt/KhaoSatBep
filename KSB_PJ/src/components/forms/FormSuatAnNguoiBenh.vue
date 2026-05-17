@@ -60,7 +60,7 @@ const showToast = message => {
   window.clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => {
     toast.value.visible = false
-  }, 2800)
+  }, 4500)
 }
 
 const addThanhPhan = () => {

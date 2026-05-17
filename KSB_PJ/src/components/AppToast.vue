@@ -29,21 +29,24 @@ defineProps({
   position: fixed;
   top: 24px;
   right: 24px;
-  z-index: 100;
+  z-index: 9999;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   max-width: min(420px, calc(100vw - 32px));
   padding: 14px 16px;
   border-radius: 14px;
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
   font-weight: 800;
+  border-width: 2px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .app-toast.success {
-  border: 1px solid #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
+  border: 2px solid #22c55e;
+  background: rgba(240, 253, 244, 0.97);
+  color: #14532d;
 }
 
 .app-toast ion-icon {
@@ -64,10 +67,11 @@ defineProps({
 
 @media (max-width: 720px) {
   .app-toast {
-    top: 14px;
+    top: max(14px, env(safe-area-inset-top));
     right: 14px;
     left: 14px;
     justify-content: center;
+    text-align: center;
   }
 }
 </style>
