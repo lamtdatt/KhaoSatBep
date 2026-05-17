@@ -142,7 +142,7 @@ const handleLogin = async () => {
   background-color: transparent;
   background-repeat: no-repeat;
   background-position: center 42%;
-  background-size: cover;
+  background-size: 98% auto;
   font-family: 'Poppins', sans-serif;
   opacity: 0;
   transform: translateY(-24px);
@@ -167,7 +167,7 @@ const handleLogin = async () => {
   opacity: 1;
   transform: translateY(0);
   background-position: center 42%;
-  background-size: cover;
+  background-size: 98% auto;
 }
 
 .form-box {
