@@ -169,7 +169,10 @@ const activeReport = computed(() => {
 })
 
 const selectedStats = computed(() => getReportStats(activeReport.value))
-const unreadCount = computed(() => reports.value.filter(report => !report.readByAdmin).length)
+const isNewSubmittedReport = report => !report.readByAdmin && report.status !== 'approved'
+const newSubmittedReports = computed(() => reports.value.filter(isNewSubmittedReport))
+const unreadCount = computed(() => newSubmittedReports.value.length)
+const latestNewReport = computed(() => newSubmittedReports.value[0] || null)
 const totalSubmitted = computed(() => reports.value.length)
 const approvedCount = computed(() => reports.value.filter(report => report.status === 'approved').length)
 const pendingCount = computed(() => reports.value.filter(report => report.status !== 'approved').length)
@@ -196,7 +199,8 @@ const recentReports = computed(() => {
   return reports.value.slice(0, 6).map(report => ({
     ...report,
     label: reportTypeLabels[report.loaiBienBan] || report.loaiBienBan,
-    time: new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN')
+    time: new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN'),
+    isNew: isNewSubmittedReport(report)
   }))
 })
 
@@ -243,6 +247,7 @@ const dashboardCards = computed(() => [
     label: 'Thông báo mới',
     value: displayCount(unreadCount.value),
     icon: 'notifications-outline',
+    highlight: unreadCount.value > 0,
     note: 'Biên bản chưa mở'
   }
 ])
@@ -434,6 +439,10 @@ const openSection = async section => {
   }
   await nextTick()
   scrollMainToTop()
+}
+
+const openNewReports = () => {
+  openSection('reports')
 }
 
 const scrollToAdminTop = () => {
@@ -1163,10 +1172,11 @@ watch(activeSection, async section => {
         <button
           type="button"
           class="admin-nav-btn"
-          :class="{ active: activeSection === 'reports' }"
+          :class="{ active: activeSection === 'reports', 'has-new': unreadCount > 0 }"
           @click="openSection('reports')"
         >
           <ion-icon name="document-text-outline"></ion-icon>
+          <b v-if="unreadCount > 0" class="nav-new-badge">Mới</b>
           <span>Biên bản cần duyệt</span>
         </button>
         <button
@@ -1220,11 +1230,12 @@ watch(activeSection, async section => {
         <button
           type="button"
           class="notification-card"
-          :class="{ active: activeSection === 'reportList' }"
-          @click="openSection('reportList')"
+          :class="{ active: activeSection === 'reports', 'has-new': unreadCount > 0 }"
+          @click="openNewReports"
         >
           <ion-icon name="notifications-outline"></ion-icon>
           <div>
+            <em v-if="unreadCount > 0" class="inline-new-badge">Vừa gửi</em>
             <strong>{{ unreadCount }} thông báo mới</strong>
             <span>Biên bản nhân viên vừa gửi</span>
           </div>
@@ -1270,17 +1281,33 @@ watch(activeSection, async section => {
             <p>{{ reportLoadError }}</p>
           </div>
         </section>
+        <section v-if="unreadCount > 0" class="new-report-alert dashboard-reveal dashboard-reveal-1">
+          <div class="new-report-alert-icon">
+            <ion-icon name="notifications"></ion-icon>
+          </div>
+          <div class="new-report-alert-content">
+            <span>Thông báo mới</span>
+            <strong>Có {{ unreadCount }} biên bản mới cần duyệt</strong>
+            <p v-if="latestNewReport">
+              Mới nhất: {{ latestNewReport.soBienBan }} - {{ reportTypeLabels[latestNewReport.loaiBienBan] || latestNewReport.loaiBienBan }}
+            </p>
+          </div>
+          <button type="button" class="new-report-alert-btn" @click="openNewReports">Xem ngay</button>
+        </section>
+
         <section class="dashboard-grid dashboard-reveal dashboard-reveal-1">
           <article
             v-for="(card, index) in dashboardCards"
             :key="card.label"
             class="dashboard-card"
+            :class="{ 'has-new': card.highlight }"
             :style="{ '--reveal-index': index }"
           >
             <div class="dashboard-card-icon">
               <ion-icon :name="card.icon"></ion-icon>
             </div>
             <div>
+              <em v-if="card.highlight" class="dashboard-new-badge">Mới</em>
               <span>{{ card.label }}</span>
               <strong>{{ card.value }}</strong>
               <p>{{ card.note }}</p>
@@ -1347,10 +1374,15 @@ watch(activeSection, async section => {
               :key="report.id"
               type="button"
               class="recent-item"
+              :class="{ 'is-new': report.isNew }"
               @click="selectReport(report)"
             >
               <div>
                 <strong>{{ report.soBienBan }}</strong>
+                <em v-if="report.isNew" class="recent-new-label">
+                  <ion-icon name="notifications"></ion-icon>
+                  Vừa gửi
+                </em>
                 <span>{{ report.label }} - {{ report.time }}</span>
               </div>
               <small>{{ report.status }}</small>
@@ -1949,6 +1981,13 @@ watch(activeSection, async section => {
   background: #e0f2fe;
 }
 
+.notification-card.has-new {
+  border-color: #7dd3fc;
+  background: linear-gradient(135deg, #e0f2fe, #f0fdf4);
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.16);
+  animation: newReportGlow 2.2s ease-in-out 2;
+}
+
 .notification-card ion-icon {
   font-size: 1.5rem;
 }
@@ -1958,6 +1997,30 @@ watch(activeSection, async section => {
   margin-top: 4px;
   color: #0369a1;
   font-size: 0.85rem;
+}
+
+.inline-new-badge,
+.nav-new-badge,
+.dashboard-new-badge,
+.recent-new-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: fit-content;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.inline-new-badge {
+  margin-bottom: 6px;
+  padding: 5px 8px;
 }
 
 .notification-area {
@@ -2004,6 +2067,21 @@ watch(activeSection, async section => {
   border-color: #7dd3fc;
   background: #e0f2fe;
   color: #075985;
+}
+
+.admin-nav-btn.has-new {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.nav-new-badge {
+  order: 3;
+  margin-left: auto;
+  padding: 5px 8px;
+  background: #fef3c7;
+  color: #b45309;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.12);
+  animation: newReportPulse 1.8s ease-in-out 3;
 }
 
 .template-menu,
@@ -2307,6 +2385,28 @@ watch(activeSection, async section => {
   }
 }
 
+@keyframes newReportGlow {
+  0%,
+  100% {
+    box-shadow: 0 12px 28px rgba(14, 165, 233, 0.12);
+  }
+
+  50% {
+    box-shadow: 0 18px 42px rgba(14, 165, 233, 0.28);
+  }
+}
+
+@keyframes newReportPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
 @keyframes moduleFillEnter {
   from {
     transform: scaleX(0.04);
@@ -2349,6 +2449,81 @@ watch(activeSection, async section => {
   color: #64748b;
 }
 
+.new-report-alert {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid #7dd3fc;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(34, 197, 94, 0.16), transparent 30%),
+    linear-gradient(135deg, #f0f9ff, #ecfeff);
+  box-shadow: 0 18px 36px rgba(14, 165, 233, 0.14);
+  animation: newReportGlow 2.2s ease-in-out 2;
+}
+
+.new-report-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  background: #0ea5e9;
+  color: #ffffff;
+  font-size: 1.45rem;
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.24);
+}
+
+.new-report-alert-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.new-report-alert-content span {
+  display: inline-flex;
+  margin-bottom: 5px;
+  color: #0284c7;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.new-report-alert-content strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.new-report-alert-content p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.new-report-alert-btn {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #0284c7;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(2, 132, 199, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.new-report-alert-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(2, 132, 199, 0.28);
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2366,6 +2541,19 @@ watch(activeSection, async section => {
   border-radius: 12px;
   background: #ffffff;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.dashboard-card.has-new {
+  position: relative;
+  border-color: #7dd3fc;
+  background: linear-gradient(135deg, #ffffff, #f0f9ff);
+  box-shadow: 0 18px 34px rgba(14, 165, 233, 0.14);
+  animation: newReportGlow 2.2s ease-in-out 2;
+}
+
+.dashboard-new-badge {
+  margin-bottom: 6px;
+  padding: 5px 8px;
 }
 
 .dashboard-card-icon {
@@ -2514,9 +2702,28 @@ watch(activeSection, async section => {
   background: #f0f9ff;
 }
 
+.recent-item.is-new {
+  border-color: #7dd3fc;
+  background:
+    linear-gradient(135deg, rgba(224, 242, 254, 0.88), rgba(240, 253, 244, 0.88));
+  box-shadow: 0 12px 26px rgba(14, 165, 233, 0.12);
+  animation: newReportGlow 2.2s ease-in-out 2;
+}
+
 .recent-item strong,
 .recent-item span {
   display: block;
+}
+
+.recent-new-label {
+  margin: 6px 0;
+  padding: 5px 8px;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.recent-new-label ion-icon {
+  font-size: 0.78rem;
 }
 
 .recent-item span,
@@ -3761,6 +3968,37 @@ watch(activeSection, async section => {
     border-radius: 12px;
   }
 
+  .new-report-alert {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .new-report-alert-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    font-size: 1.2rem;
+  }
+
+  .new-report-alert-content strong {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .new-report-alert-content p {
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .new-report-alert-btn {
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 0.86rem;
+  }
+
   .panel-head {
     flex-direction: column;
     gap: 8px;
@@ -4229,6 +4467,18 @@ watch(activeSection, async section => {
   .dashboard-card-icon {
     width: 42px;
     height: 42px;
+  }
+
+  .new-report-alert {
+    flex-wrap: wrap;
+  }
+
+  .new-report-alert-content {
+    flex: 1 1 calc(100% - 54px);
+  }
+
+  .new-report-alert-btn {
+    width: 100%;
   }
 
   .report-column {
