@@ -432,10 +432,16 @@ button:disabled {
 
 .error-text {
   margin: 14px 0 0;
-  color: #fee2e2;
+  padding: 10px 12px;
+  border: 1px solid rgba(220, 38, 38, 0.55);
+  border-radius: 12px;
+  background: rgba(127, 29, 29, 0.78);
+  color: #ffffff;
   text-align: center;
   font-size: 0.92rem;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+  font-weight: 800;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.55);
+  box-shadow: 0 10px 24px rgba(127, 29, 29, 0.24);
 }
 
 @keyframes spin {
