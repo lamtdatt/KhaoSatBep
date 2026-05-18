@@ -1,11 +1,13 @@
 <script setup>
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppToast from '@/components/AppToast.vue'
+import { clearFormDraft, loadFormDraft, saveFormDraft, scrollFocusedFieldIntoView } from '@/utils/formDraftStore'
 import { saveReport } from '@/utils/reportStore'
 import { applyReportTemplate } from '@/utils/templateStore'
 
 const router = useRouter()
+const DRAFT_KEY = 'bb_vesinh'
 
 const form = ref({
   ngayKiemTra: new Date().toISOString().split('T')[0],
@@ -72,6 +74,19 @@ const removeThanhPhan = index => {
   })
 }
 
+const restoreDraft = () => {
+  const draft = loadFormDraft(DRAFT_KEY)
+  if (!draft) return
+  if (draft.form) form.value = draft.form
+  if (Array.isArray(draft.sections)) sections.value = draft.sections
+  if (Number.isInteger(draft.activeSectionIndex)) activeSectionIndex.value = draft.activeSectionIndex
+}
+
+const cancelForm = () => {
+  clearFormDraft(DRAFT_KEY)
+  router.push('/employee')
+}
+
 const submitForm = async () => {
   isSubmitting.value = true
 
@@ -97,6 +112,7 @@ const submitForm = async () => {
       chuKys: []
     })
 
+    clearFormDraft(DRAFT_KEY)
     showToast('Đã gửi biên bản lên admin thành công!')
   } catch (error) {
     showToast(error.message || 'Không thể gửi biên bản.')
@@ -104,6 +120,22 @@ const submitForm = async () => {
     isSubmitting.value = false
   }
 }
+
+onMounted(() => {
+  restoreDraft()
+})
+
+watch(
+  [form, sections, activeSectionIndex],
+  () => {
+    saveFormDraft(DRAFT_KEY, {
+      form: form.value,
+      sections: sections.value,
+      activeSectionIndex: activeSectionIndex.value
+    })
+  },
+  { deep: true }
+)
 
 onUnmounted(() => {
   window.clearTimeout(toastTimer)
@@ -186,7 +218,9 @@ onUnmounted(() => {
                 <td>{{ row.noiDung }}</td>
                 <td class="text-center"><input v-model="row.dat" type="radio" :name="`vsattp_${row.mucSo}`" :value="true" /></td>
                 <td class="text-center"><input v-model="row.dat" type="radio" :name="`vsattp_${row.mucSo}`" :value="false" /></td>
-                <td><input v-model="row.ghiChu" type="text" placeholder="Nhập ghi chú..." class="glass-input-sm" /></td>
+                <td>
+                  <textarea v-model="row.ghiChu" rows="2" placeholder="Nhập ghi chú..." class="glass-input-sm note-input" @focus="scrollFocusedFieldIntoView"></textarea>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -202,16 +236,16 @@ onUnmounted(() => {
         <h3>Ý kiến - Đề xuất</h3>
         <div class="form-group">
           <label>Nhắc nhở, góp ý của Khoa Dinh Dưỡng</label>
-          <textarea v-model="form.gopYKhoaDinhDuong" rows="4" class="glass-input"></textarea>
+          <textarea v-model="form.gopYKhoaDinhDuong" rows="4" class="glass-input" @focus="scrollFocusedFieldIntoView"></textarea>
         </div>
         <div class="form-group">
           <label>Ý kiến của Bộ phận CB & CCSA</label>
-          <textarea v-model="form.yKienBPCB" rows="4" class="glass-input"></textarea>
+          <textarea v-model="form.yKienBPCB" rows="4" class="glass-input" @focus="scrollFocusedFieldIntoView"></textarea>
         </div>
       </div>
 
       <div class="form-actions">
-        <button type="button" class="btn-secondary" @click="router.push('/employee')">Hủy</button>
+        <button type="button" class="btn-secondary" @click="cancelForm">Hủy</button>
         <button type="submit" class="btn-primary" :disabled="isSubmitting">
           <span v-if="!isSubmitting"><ion-icon name="send-outline"></ion-icon> Gửi biên bản lên admin</span>
           <span v-else class="spinner"></span>
@@ -232,8 +266,9 @@ onUnmounted(() => {
 .content-header, .section-topline { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.glass-input, .glass-input-sm { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; padding: 12px 16px; font-family: inherit; font-size: 0.95rem; }
+.glass-input, .glass-input-sm { width: 100%; max-width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; padding: 12px 16px; font-family: inherit; font-size: 0.95rem; }
 .glass-input-sm { padding: 8px 12px; font-size: 0.85rem; width: 100%; }
+.note-input { display: block; min-height: 44px; line-height: 1.45; resize: vertical; white-space: pre-wrap; overflow-wrap: anywhere; }
 .thanh-phan-item { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
 .stt-badge { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #eff6ff; color: #0369a1; border-radius: 50%; font-weight: 700; flex-shrink: 0; }
 .flex-1 { flex: 1; }
@@ -256,7 +291,12 @@ onUnmounted(() => {
 .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 768px) {
+  .form-container { padding-bottom: max(320px, env(safe-area-inset-bottom)); }
   .form-row { grid-template-columns: 1fr; }
   .thanh-phan-item, .content-header, .section-pager, .form-actions { flex-direction: column; align-items: stretch; }
+  .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+  .glass-table { min-width: 760px; }
+  .note-input { min-width: 180px; min-height: 72px; font-size: 0.95rem; }
+  .glass-input:focus, .glass-input-sm:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18); outline: none; }
 }
 </style>
