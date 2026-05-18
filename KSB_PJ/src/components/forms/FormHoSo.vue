@@ -255,7 +255,29 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .form-container { padding-bottom: max(320px, env(safe-area-inset-bottom)); }
   .form-row, .signature-grid { grid-template-columns: 1fr; }
-  .thanh-phan-item { flex-direction: column; align-items: stretch; }
+  .thanh-phan-item {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) 38px;
+    gap: 8px;
+    align-items: center;
+  }
+  .thanh-phan-item .glass-input {
+    min-width: 0;
+    padding: 9px 10px;
+    font-size: 0.86rem;
+  }
+  .thanh-phan-item .btn-icon {
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #fff1f2;
+  }
+  .stt-badge {
+    width: 34px;
+    height: 34px;
+  }
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
   .glass-table { min-width: 760px; }
   .note-input { min-width: 180px; min-height: 72px; font-size: 0.95rem; }
