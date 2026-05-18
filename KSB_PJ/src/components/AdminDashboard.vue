@@ -3579,46 +3579,68 @@ watch(activeSection, async section => {
 
   .admin-sidebar {
     position: relative;
-    gap: 12px;
-    padding: 16px;
+    gap: 10px;
+    padding: 12px 14px;
     border-right: none;
     border-bottom: 1px solid #dbe4ef;
   }
 
   .brand {
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 2px 4px 4px;
   }
 
   .brand img {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
   .brand h2 {
-    font-size: 1.35rem;
+    font-size: 1.22rem;
+    line-height: 1.05;
   }
 
   .brand p {
-    font-size: 0.82rem;
+    margin-top: 2px;
+    font-size: 0.78rem;
   }
 
   .admin-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 
   .admin-nav-btn {
-    min-height: 42px;
-    padding: 9px 10px;
-    border-radius: 11px;
-    font-size: 0.92rem;
+    min-height: 38px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    font-size: 0.9rem;
   }
 
   .template-menu,
   .template-combo {
     grid-column: 1 / -1;
     min-height: auto;
-    padding: 10px;
+    padding: 7px 10px;
+    border-radius: 9px;
+  }
+
+  .template-menu-toggle {
+    min-height: 24px;
+    font-size: 0.9rem;
+  }
+
+  .template-menu-list {
+    gap: 4px;
+    padding: 5px 0 0 24px;
+  }
+
+  .template-menu-item {
+    min-height: 34px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    font-size: 0.86rem;
   }
 
   .template-combo select {
@@ -3627,47 +3649,65 @@ watch(activeSection, async section => {
   }
 
   .notification-area {
-    margin-top: 2px;
+    gap: 8px;
+    margin-top: 0;
   }
 
   .notification-card {
-    padding: 12px;
-    border-radius: 12px;
+    gap: 10px;
+    padding: 9px 11px;
+    border-radius: 10px;
+  }
+
+  .notification-card ion-icon {
+    font-size: 1.25rem;
   }
 
   .notification-card strong,
   .notification-card span {
-    font-size: 0.9rem;
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  .notification-card span {
+    margin-top: 2px;
   }
 
   .logout-btn {
     margin-top: 0;
-    padding: 11px;
+    min-height: 38px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    align-items: center;
+    font-size: 0.9rem;
   }
 
   .admin-main {
     height: auto;
     min-height: 100dvh;
-    padding: 18px 14px 28px;
+    padding: 14px 14px max(28px, env(safe-area-inset-bottom));
     overflow: visible;
   }
 
   .admin-header {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .eyebrow {
-    font-size: 0.72rem;
+    margin-bottom: 5px;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
   }
 
   .admin-header h1 {
-    font-size: 1.55rem;
-    line-height: 1.14;
+    font-size: 1.34rem;
+    line-height: 1.12;
   }
 
   .admin-header p {
-    font-size: 0.92rem;
-    line-height: 1.45;
+    margin-top: 6px;
+    font-size: 0.84rem;
+    line-height: 1.35;
   }
 
   .dashboard-card,
@@ -3682,12 +3722,29 @@ watch(activeSection, async section => {
   }
 
   .dashboard-card {
-    min-height: auto;
-    padding: 14px;
+    min-height: 92px;
+    gap: 12px;
+    padding: 12px;
   }
 
   .dashboard-card strong {
-    font-size: 1.6rem;
+    margin: 4px 0;
+    font-size: 1.45rem;
+  }
+
+  .dashboard-card span {
+    font-size: 0.86rem;
+  }
+
+  .dashboard-card p {
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  .dashboard-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
 
   .panel-head {
@@ -3730,6 +3787,11 @@ watch(activeSection, async section => {
   .form-signatures,
   .chart-row {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    gap: 10px;
+    margin-bottom: 12px;
   }
 
   .report-filters {
@@ -3848,7 +3910,7 @@ watch(activeSection, async section => {
 
 @media (max-width: 420px) {
   .admin-sidebar {
-    padding: 14px 12px;
+    padding: 10px 12px;
   }
 
   .admin-nav {
@@ -3862,15 +3924,15 @@ watch(activeSection, async section => {
   }
 
   .notification-card {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .admin-main {
-    padding: 16px 10px 26px;
+    padding: 12px 10px max(26px, env(safe-area-inset-bottom));
   }
 
   .admin-header h1 {
-    font-size: 1.42rem;
+    font-size: 1.26rem;
   }
 
   .analytics-panel,
@@ -3881,12 +3943,14 @@ watch(activeSection, async section => {
   }
 
   .dashboard-card {
-    gap: 12px;
+    min-height: 88px;
+    gap: 10px;
+    padding: 11px;
   }
 
   .dashboard-card-icon {
-    width: 46px;
-    height: 46px;
+    width: 42px;
+    height: 42px;
   }
 
   .report-column {
