@@ -164,7 +164,7 @@ const logout = async () => {
   }
 
   isSigningOut.value = true
-  await new Promise(resolve => window.setTimeout(resolve, 320))
+  await new Promise(resolve => window.setTimeout(resolve, 760))
   clearAuthSession()
   await router.replace('/login')
 }
@@ -225,6 +225,16 @@ watch(
 
 <template>
   <div class="dashboard-layout" :class="{ 'is-ready': isDashboardReady, 'is-signing-out': isSigningOut }">
+    <Transition name="signout-overlay">
+      <div v-if="isSigningOut" class="signout-overlay" aria-live="polite">
+        <div class="signout-card">
+          <span class="signout-spinner"></span>
+          <strong>Đang đăng xuất</strong>
+          <p>Đang đưa bạn về màn hình đăng nhập...</p>
+        </div>
+      </div>
+    </Transition>
+
     <button
       v-show="showMobileBackTop"
       type="button"
@@ -387,14 +397,81 @@ watch(
 }
 
 .dashboard-layout.is-signing-out {
+  pointer-events: none;
+}
+
+.dashboard-layout.is-signing-out .sidebar,
+.dashboard-layout.is-signing-out .main-content {
   opacity: 0;
   transform: translateY(14px) scale(0.985);
   filter: blur(5px);
-  pointer-events: none;
+  transition:
+    opacity 0.46s ease,
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.5s ease;
 }
 
 .mobile-back-top {
   display: none;
+}
+
+.signout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(237, 244, 251, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.signout-card {
+  display: grid;
+  justify-items: center;
+  width: min(320px, calc(100vw - 40px));
+  padding: 26px;
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+  text-align: center;
+}
+
+.signout-card strong {
+  margin-top: 14px;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.signout-card p {
+  margin: 8px 0 0;
+  color: #64748b;
+}
+
+.signout-spinner {
+  display: inline-block;
+  width: 42px;
+  height: 42px;
+  border: 3px solid #bae6fd;
+  border-top-color: #0284c7;
+  border-radius: 50%;
+  animation: signoutSpin 0.85s linear infinite;
+}
+
+.signout-overlay-enter-active,
+.signout-overlay-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.signout-overlay-enter-from,
+.signout-overlay-leave-to {
+  opacity: 0;
+}
+
+@keyframes signoutSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sidebar {
