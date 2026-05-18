@@ -24,14 +24,24 @@ export const apiRequest = async (path, options = {}) => {
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
 
-  const response = await fetch(`${API_BASE_URL}/api${path}`, {
-    ...fetchOptions,
-    cache: fetchOptions.cache || 'no-store',
-    headers: buildHeaders(fetchOptions.headers),
-    signal: fetchOptions.signal || controller.signal
-  }).finally(() => {
+  let response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api${path}`, {
+      ...fetchOptions,
+      cache: fetchOptions.cache || 'no-store',
+      headers: buildHeaders(fetchOptions.headers),
+      signal: fetchOptions.signal || controller.signal
+    })
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('Máy chủ phản hồi chậm, vui lòng thử lại sau ít phút.')
+    }
+
+    throw error
+  } finally {
     window.clearTimeout(timeoutId)
-  })
+  }
 
   const contentType = response.headers.get('content-type') || ''
   const body = contentType.includes('application/json')

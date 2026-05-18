@@ -19,7 +19,7 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // ============================
 // 1. DATABASE (Supabase PostgreSQL)
 // ============================
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContextPool<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()));

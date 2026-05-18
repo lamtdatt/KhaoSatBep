@@ -50,7 +50,7 @@
             <span v-if="!isLoading">Log in</span>
             <span v-else class="loading-content">
               <span class="spinner"></span>
-              <span>Đang đăng nhập...</span>
+              <span>{{ loginStatusMessage }}</span>
             </span>
           </button>
 
@@ -79,6 +79,7 @@ const isLoading = ref(false)
 const isReady = ref(false)
 const isLeaving = ref(false)
 const errorMessage = ref('')
+const loginStatusMessage = ref('Đang đăng nhập...')
 const router = useRouter()
 
 onMounted(() => {
@@ -102,10 +103,15 @@ const handleLogin = async () => {
 
   isLoading.value = true
   errorMessage.value = ''
+  loginStatusMessage.value = 'Đang kết nối máy chủ...'
+  const slowLoginTimer = window.setTimeout(() => {
+    loginStatusMessage.value = 'Máy chủ phản hồi hơi chậm, vui lòng chờ...'
+  }, 5000)
 
   try {
     const session = await apiRequest('/Auth/dang-nhap', {
       method: 'POST',
+      timeoutMs: 15000,
       body: JSON.stringify({
         email: email.value,
         matKhau: password.value
@@ -130,6 +136,7 @@ const handleLogin = async () => {
   } catch (error) {
     errorMessage.value = error.message || 'Dang nhap that bai'
   } finally {
+    window.clearTimeout(slowLoginTimer)
     isLoading.value = false
   }
 }
