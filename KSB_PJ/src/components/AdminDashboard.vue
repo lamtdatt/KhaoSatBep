@@ -20,6 +20,7 @@ const templateEditorDetails = ref([])
 const reportSearch = ref('')
 const reportDateFrom = ref('')
 const reportDateTo = ref('')
+const reportStatusFilter = ref('')
 const adminMainRef = ref(null)
 const selectedReportSectionRef = ref(null)
 const adminName = ref('Admin duyệt biên bản')
@@ -169,14 +170,24 @@ const activeReport = computed(() => {
 })
 
 const selectedStats = computed(() => getReportStats(activeReport.value))
-const isNewSubmittedReport = report => !report.readByAdmin && report.status !== 'approved'
-const newSubmittedReports = computed(() => reports.value.filter(isNewSubmittedReport))
-const unreadCount = computed(() => newSubmittedReports.value.length)
-const latestNewReport = computed(() => newSubmittedReports.value[0] || null)
+const normalizeStatus = status => String(status || '').trim().toLowerCase()
+const isReviewPendingStatus = status => [
+  'submitted',
+  'pending',
+  'cho_duyet',
+  'cho duyet',
+  'chờ duyệt',
+  'chua duyet',
+  'chưa duyệt'
+].includes(normalizeStatus(status))
+const isPendingReviewReport = report => isReviewPendingStatus(report?.status)
+const reviewQueueReports = computed(() => reports.value.filter(isPendingReviewReport))
+const unreadCount = computed(() => reviewQueueReports.value.length)
+const latestNewReport = computed(() => reviewQueueReports.value[0] || null)
 const totalSubmitted = computed(() => reports.value.length)
 const approvedCount = computed(() => reports.value.filter(report => report.status === 'approved').length)
-const pendingCount = computed(() => reports.value.filter(report => report.status !== 'approved').length)
-const submittedCount = computed(() => reports.value.filter(report => report.status === 'submitted').length)
+const pendingCount = computed(() => reviewQueueReports.value.length)
+const submittedCount = computed(() => reviewQueueReports.value.length)
 const reviewedCount = computed(() => reports.value.filter(report => report.status === 'reviewed').length)
 const isInitialReportLoading = computed(() => isReportsLoading.value && reports.value.length === 0)
 const displayCount = value => (isInitialReportLoading.value ? '...' : value)
@@ -200,7 +211,24 @@ const recentReports = computed(() => {
     ...report,
     label: reportTypeLabels[report.loaiBienBan] || report.loaiBienBan,
     time: new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN'),
-    isNew: isNewSubmittedReport(report)
+    isNew: isPendingReviewReport(report)
+  }))
+})
+
+const reviewQueueGroups = computed(() => {
+  return Object.entries(reportTypeLabels).map(([type, label]) => ({
+    type,
+    label,
+    reports: reviewQueueReports.value.filter(report => report.loaiBienBan === type)
+  }))
+})
+
+const reportStatusOptions = computed(() => {
+  const statuses = new Set(reports.value.map(report => report.status).filter(Boolean))
+
+  return Array.from(statuses).map(status => ({
+    value: status,
+    label: getStatusLabel(status)
   }))
 })
 
@@ -288,7 +316,9 @@ const filteredReports = computed(() => {
       report.ngayKiemTra
     ].join(' ').toLowerCase()
 
-    return (!keyword || text.includes(keyword)) && isReportInDateRange(report)
+    return (!keyword || text.includes(keyword))
+      && (!reportStatusFilter.value || report.status === reportStatusFilter.value)
+      && isReportInDateRange(report)
   })
 })
 
@@ -304,6 +334,7 @@ const resetReportFilters = () => {
   reportSearch.value = ''
   reportDateFrom.value = ''
   reportDateTo.value = ''
+  reportStatusFilter.value = ''
 }
 
 const loadTemplateEditor = type => {
@@ -436,6 +467,10 @@ const openSection = async section => {
   activeSection.value = section
   if (section !== 'templateManager') {
     isTemplateMenuOpen.value = false
+  }
+  if (section === 'reports' && activeReport.value && !isPendingReviewReport(activeReport.value)) {
+    selectedId.value = ''
+    selectedReport.value = null
   }
   await nextTick()
   scrollMainToTop()
@@ -1425,6 +1460,16 @@ watch(activeSection, async section => {
               <input v-model="reportDateTo" type="date" />
             </label>
 
+            <label class="filter-field">
+              <span>Tráº¡ng thÃ¡i</span>
+              <select v-model="reportStatusFilter">
+                <option value="">Táº¥t cáº£ tráº¡ng thÃ¡i</option>
+                <option v-for="option in reportStatusOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
             <button type="button" class="btn secondary filter-reset" @click="resetReportFilters">
               Xóa lọc
             </button>
@@ -1452,7 +1497,7 @@ watch(activeSection, async section => {
               >
                 <div class="report-library-topline">
                   <strong>{{ report.soBienBan }}</strong>
-                  <span>{{ report.status }}</span>
+                  <span>{{ getStatusLabel(report.status) }}</span>
                 </div>
                 <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
                 <p>Ngày kiểm tra: {{ report.ngayKiemTra }}</p>
@@ -1579,6 +1624,48 @@ watch(activeSection, async section => {
       </template>
 
       <template v-else>
+        <section v-if="activeSection === 'reports'" class="review-queue-panel dashboard-reveal dashboard-reveal-1">
+          <div class="report-library-head">
+            <div>
+              <h2>BiÃªn báº£n cáº§n duyá»‡t</h2>
+              <p>Chá»‰ hiá»ƒn thá»‹ cÃ¡c biÃªn báº£n Ä‘ang á»Ÿ tráº¡ng thÃ¡i submitted/chá» duyá»‡t Ä‘á»ƒ admin xá»­ lÃ½.</p>
+            </div>
+            <div class="report-total-pill">{{ reviewQueueReports.length }} cáº§n duyá»‡t</div>
+          </div>
+
+          <div v-if="reviewQueueReports.length" class="review-queue-groups">
+            <article v-for="group in reviewQueueGroups" :key="group.type" class="review-queue-group">
+              <div class="review-queue-group-head">
+                <strong>{{ group.label }}</strong>
+                <span>{{ group.reports.length }}</span>
+              </div>
+
+              <div v-if="group.reports.length" class="review-queue-list">
+                <button
+                  v-for="report in group.reports"
+                  :key="report.id"
+                  type="button"
+                  class="report-library-item review-queue-item"
+                  :class="{ unread: isPendingReviewReport(report), active: report.id === selectedId }"
+                  @click="selectReport(report)"
+                >
+                  <div class="report-library-topline">
+                    <strong>{{ report.soBienBan }}</strong>
+                    <span>{{ getStatusLabel(report.status) }}</span>
+                  </div>
+                  <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
+                  <p>NgÃ y kiá»ƒm tra: {{ report.ngayKiemTra }}</p>
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <div v-else class="dashboard-empty">
+            <ion-icon name="checkmark-done-outline"></ion-icon>
+            <p>Hiá»‡n khÃ´ng cÃ³ biÃªn báº£n nÃ o Ä‘ang chá» duyá»‡t.</p>
+          </div>
+        </section>
+
         <section v-if="activeReport" ref="selectedReportSectionRef" class="workspace-grid selected-workspace">
         <div class="editor-panel">
           <div class="panel-head">
@@ -1665,7 +1752,7 @@ watch(activeSection, async section => {
         </div>
         </section>
 
-        <section v-else class="empty-state">
+        <section v-else-if="activeSection !== 'reports'" class="empty-state">
           <ion-icon name="document-text-outline"></ion-icon>
           <p>{{ reports.length ? 'Chọn một biên bản ở danh sách thông báo bên trái để xem chi tiết.' : 'Chưa có biên bản nào. Hãy gửi một biên bản từ tài khoản nhân viên để admin nhận thông báo.' }}</p>
         </section>
@@ -2795,7 +2882,7 @@ watch(activeSection, async section => {
 
 .report-filters {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 180px 180px auto;
+  grid-template-columns: minmax(260px, 1fr) 170px 170px 190px auto;
   gap: 12px;
   align-items: end;
   min-width: 0;
@@ -2815,6 +2902,7 @@ watch(activeSection, async section => {
 }
 
 .filter-field input,
+.filter-field select,
 .search-field div {
   width: 100%;
   max-width: 100%;
@@ -2830,6 +2918,12 @@ watch(activeSection, async section => {
   color: #0f172a;
   font: inherit;
   min-width: 0;
+}
+
+.filter-field select {
+  padding: 9px 12px;
+  color: #0f172a;
+  font: inherit;
 }
 
 .search-field div {
@@ -2855,6 +2949,67 @@ watch(activeSection, async section => {
 
 .filter-reset {
   min-height: 42px;
+}
+
+.review-queue-panel {
+  padding: 18px;
+  margin-bottom: 16px;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.review-queue-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.review-queue-group {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.review-queue-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.review-queue-group-head strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.review-queue-group-head span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-weight: 900;
+}
+
+.review-queue-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.review-queue-item {
+  border-color: #7dd3fc;
+  background: #f0f9ff;
 }
 
 .report-columns {
@@ -3747,6 +3902,7 @@ watch(activeSection, async section => {
 
   .dashboard-grid,
   .report-columns,
+  .review-queue-groups,
   .form-signatures,
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4035,6 +4191,7 @@ watch(activeSection, async section => {
 
   .dashboard-grid,
   .report-columns,
+  .review-queue-groups,
   .summary-grid,
   .form-signatures,
   .chart-row {
@@ -4056,6 +4213,15 @@ watch(activeSection, async section => {
 
   .report-library-panel {
     overflow: hidden;
+  }
+
+  .review-queue-panel {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .review-queue-group {
+    padding: 10px;
   }
 
   .report-library-head {
