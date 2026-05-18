@@ -2591,11 +2591,14 @@ watch(activeSection, async section => {
   grid-template-columns: minmax(260px, 1fr) 180px 180px auto;
   gap: 12px;
   align-items: end;
+  min-width: 0;
 }
 
 .filter-field {
   display: grid;
   gap: 7px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filter-field span {
@@ -2607,16 +2610,19 @@ watch(activeSection, async section => {
 .filter-field input,
 .search-field div {
   width: 100%;
+  max-width: 100%;
   min-height: 42px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background: #f8fafc;
+  box-sizing: border-box;
 }
 
 .filter-field input {
   padding: 9px 12px;
   color: #0f172a;
   font: inherit;
+  min-width: 0;
 }
 
 .search-field div {
@@ -2624,6 +2630,7 @@ watch(activeSection, async section => {
   align-items: center;
   gap: 8px;
   padding: 0 12px;
+  min-width: 0;
 }
 
 .search-field ion-icon {
@@ -2631,6 +2638,7 @@ watch(activeSection, async section => {
 }
 
 .search-field input {
+  flex: 1 1 auto;
   min-height: 40px;
   padding: 0;
   border: none;
@@ -3796,6 +3804,67 @@ watch(activeSection, async section => {
 
   .report-filters {
     grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .report-library-panel {
+    overflow: hidden;
+  }
+
+  .report-library-head {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .report-library-head p {
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .report-total-pill {
+    align-self: flex-start;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+
+  .filter-field {
+    gap: 5px;
+    width: 100%;
+  }
+
+  .filter-field span {
+    font-size: 0.82rem;
+  }
+
+  .filter-field input,
+  .search-field div {
+    width: 100%;
+    max-width: 100%;
+    min-height: 40px;
+  }
+
+  .filter-field input {
+    padding: 8px 10px;
+    font-size: 0.88rem;
+  }
+
+  .search-field div {
+    padding: 0 10px;
+  }
+
+  .search-field input {
+    font-size: 0.88rem;
+    text-overflow: ellipsis;
+  }
+
+  .filter-reset {
+    width: 100%;
+    max-width: 100%;
+    min-height: 40px;
+    margin-top: 2px;
   }
 
   .report-library-head {
@@ -3939,7 +4008,7 @@ watch(activeSection, async section => {
   .editor-panel,
   .report-library-panel,
   .template-glass-card {
-    padding: 14px;
+    padding: 12px;
   }
 
   .dashboard-card {

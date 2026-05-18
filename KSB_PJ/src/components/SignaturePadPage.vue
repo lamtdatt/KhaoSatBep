@@ -37,6 +37,7 @@ const toast = ref({
 let drawing = false
 let ctx = null
 let toastTimer = null
+let hasCanvasInput = false
 
 const showToast = message => {
   toast.value = {
@@ -57,7 +58,28 @@ const loadSignature = () => {
   if (profile) {
     signatureName.value = profile.name || props.defaultName
     signatureRole.value = profile.role || props.defaultRole
+    return
   }
+
+  signatureName.value = signatureName.value || props.defaultName
+  signatureRole.value = signatureRole.value || props.defaultRole
+}
+
+const isCanvasBlank = canvas => {
+  if (!canvas) {
+    return true
+  }
+
+  const checkCtx = canvas.getContext('2d')
+  const pixels = checkCtx.getImageData(0, 0, canvas.width, canvas.height).data
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index] < 250 || pixels[index + 1] < 250 || pixels[index + 2] < 250) {
+      return false
+    }
+  }
+
+  return true
 }
 
 const setupCanvas = () => {
@@ -89,6 +111,7 @@ const setupCanvas = () => {
       ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, width, height)
       ctx.drawImage(image, 0, 0, width, height)
+      hasCanvasInput = false
     }
     image.src = savedSignature.value.imageData
   }
@@ -111,6 +134,7 @@ const startDrawing = event => {
   }
 
   drawing = true
+  hasCanvasInput = true
   const point = getCanvasPoint(event)
   ctx.beginPath()
   ctx.moveTo(point.x, point.y)
@@ -143,6 +167,7 @@ const clearCanvas = () => {
   const height = canvas.offsetHeight || 320
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, width, height)
+  hasCanvasInput = false
 }
 
 const saveSignature = () => {
@@ -151,33 +176,46 @@ const saveSignature = () => {
     return
   }
 
+  const shouldKeepSavedImage = savedSignature.value?.imageData && !hasCanvasInput && isCanvasBlank(canvas)
   const profile = {
     name: signatureName.value.trim() || props.defaultName,
     role: signatureRole.value.trim() || props.defaultRole,
-    imageData: canvas.toDataURL('image/png'),
+    imageData: shouldKeepSavedImage ? savedSignature.value.imageData : canvas.toDataURL('image/png'),
     updatedAt: new Date().toISOString()
   }
 
   saveSignatureProfile(profile, props.storageRole)
   savedSignature.value = profile
+  hasCanvasInput = false
   showToast(props.successMessage)
 }
 
 const removeSignature = async () => {
   clearSignatureProfile(props.storageRole)
   savedSignature.value = null
+  hasCanvasInput = false
   await nextTick()
   clearCanvas()
 }
 
-onMounted(async () => {
+const refreshSavedSignature = async () => {
   loadSignature()
   await nextTick()
   setupCanvas()
+}
+
+onMounted(async () => {
+  await refreshSavedSignature()
+  window.addEventListener('focus', refreshSavedSignature)
+  window.addEventListener('pageshow', refreshSavedSignature)
+  window.addEventListener('storage', refreshSavedSignature)
 })
 
 onUnmounted(() => {
   window.clearTimeout(toastTimer)
+  window.removeEventListener('focus', refreshSavedSignature)
+  window.removeEventListener('pageshow', refreshSavedSignature)
+  window.removeEventListener('storage', refreshSavedSignature)
 })
 </script>
 
