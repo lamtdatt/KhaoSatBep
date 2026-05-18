@@ -4,6 +4,8 @@ import { getSignatureProfile } from '@/utils/signatureStore'
 const REPORTS_KEY = 'ksb_submitted_reports'
 const REPORT_META_KEY = 'ksb_report_meta'
 const EMPLOYEE_APPROVED_READ_KEY = 'ksb_employee_approved_read_ids'
+const REPORT_REFRESH_RETRIES = 3
+const REPORT_REFRESH_RETRY_DELAY_MS = 900
 
 const FRONTEND_REPORT_TYPES = {
   CSHT: 'CoSoHaTang',
@@ -67,6 +69,8 @@ const writeEmployeeApprovedReadIds = ids => {
   writeJson(EMPLOYEE_APPROVED_READ_KEY, [...new Set(ids.map(String))])
   window.dispatchEvent(new CustomEvent('ksb-employee-notifications-updated'))
 }
+
+const wait = ms => new Promise(resolve => window.setTimeout(resolve, ms))
 
 const mergeMeta = report => {
   const meta = readMeta()[String(report.id)] || {}
@@ -314,9 +318,40 @@ const buildCreatePayload = report => {
 
 export const getReports = () => readReports()
 
+const fetchReportSummaries = async () => {
+  let lastError = null
+
+  for (let attempt = 1; attempt <= REPORT_REFRESH_RETRIES; attempt += 1) {
+    try {
+      const response = await apiRequest('/BienBan')
+      if (Array.isArray(response) && (response.length || attempt === REPORT_REFRESH_RETRIES)) {
+        return response
+      }
+
+      if (!Array.isArray(response)) {
+        throw new Error('Du lieu bien ban tra ve khong dung dinh dang.')
+      }
+
+      await wait(REPORT_REFRESH_RETRY_DELAY_MS * attempt)
+    } catch (error) {
+      lastError = error
+      if (attempt < REPORT_REFRESH_RETRIES) {
+        await wait(REPORT_REFRESH_RETRY_DELAY_MS * attempt)
+      }
+    }
+  }
+
+  throw lastError
+}
+
 export const refreshReports = async () => {
-  const response = await apiRequest('/BienBan')
+  const response = await fetchReportSummaries()
   const existing = readReports()
+
+  if (!response.length && existing.length) {
+    return existing
+  }
+
   const detailedById = new Map(
     existing
       .filter(report => Array.isArray(report.chiTiets) && report.chiTiets.length)

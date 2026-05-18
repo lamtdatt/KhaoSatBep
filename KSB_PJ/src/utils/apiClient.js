@@ -1,6 +1,7 @@
 import { clearAuthSession, getAccessToken } from '@/utils/authStore'
 
 const DEFAULT_API_BASE_URL = 'https://khaosatbep-api.onrender.com'
+const DEFAULT_TIMEOUT_MS = 45000
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
 
@@ -19,9 +20,17 @@ const buildHeaders = customHeaders => {
 }
 
 export const apiRequest = async (path, options = {}) => {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+
   const response = await fetch(`${API_BASE_URL}/api${path}`, {
-    ...options,
-    headers: buildHeaders(options.headers)
+    ...fetchOptions,
+    cache: fetchOptions.cache || 'no-store',
+    headers: buildHeaders(fetchOptions.headers),
+    signal: fetchOptions.signal || controller.signal
+  }).finally(() => {
+    window.clearTimeout(timeoutId)
   })
 
   const contentType = response.headers.get('content-type') || ''

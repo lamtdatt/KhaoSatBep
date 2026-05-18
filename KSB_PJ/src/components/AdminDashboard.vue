@@ -32,6 +32,9 @@ const adminIntroProgress = ref(8)
 const showMobileBackTop = ref(false)
 const isSigningOut = ref(false)
 const isApprovingReport = ref(false)
+const isReportsLoading = ref(true)
+const reportLoadError = ref('')
+const isTemplateMenuOpen = ref(false)
 const toast = ref({
   visible: false,
   message: '',
@@ -90,7 +93,7 @@ const logout = async () => {
   }
 
   isSigningOut.value = true
-  await new Promise(resolve => window.setTimeout(resolve, 320))
+  await new Promise(resolve => window.setTimeout(resolve, 760))
   clearAuthSession()
   await router.replace('/login')
 }
@@ -145,8 +148,20 @@ const applyReportsFromCache = () => {
 }
 
 const loadReports = async () => {
-  await refreshReports()
   applyReportsFromCache()
+  isReportsLoading.value = true
+  reportLoadError.value = ''
+
+  try {
+    await refreshReports()
+    applyReportsFromCache()
+  } catch (error) {
+    console.error('Khong the tai danh sach bien ban:', error)
+    reportLoadError.value = 'Chưa kết nối được dữ liệu mới. Hãy thử lại sau ít phút.'
+    applyReportsFromCache()
+  } finally {
+    isReportsLoading.value = false
+  }
 }
 
 const activeReport = computed(() => {
@@ -160,6 +175,8 @@ const approvedCount = computed(() => reports.value.filter(report => report.statu
 const pendingCount = computed(() => reports.value.filter(report => report.status !== 'approved').length)
 const submittedCount = computed(() => reports.value.filter(report => report.status === 'submitted').length)
 const reviewedCount = computed(() => reports.value.filter(report => report.status === 'reviewed').length)
+const isInitialReportLoading = computed(() => isReportsLoading.value && reports.value.length === 0)
+const displayCount = value => (isInitialReportLoading.value ? '...' : value)
 
 const totalCheckedItems = computed(() => {
   return reports.value.reduce((sum, report) => sum + getReportStats(report).total, 0)
@@ -206,25 +223,25 @@ const maxStatusCount = computed(() => Math.max(...statusStats.value.map(stat => 
 const dashboardCards = computed(() => [
   {
     label: 'Tổng biên bản',
-    value: totalSubmitted.value,
+    value: displayCount(totalSubmitted.value),
     icon: 'folder-open-outline',
     note: 'Tất cả biên bản đã nhận'
   },
   {
     label: 'Chờ duyệt',
-    value: submittedCount.value,
+    value: displayCount(submittedCount.value),
     icon: 'time-outline',
     note: 'Cần admin xử lý'
   },
   {
     label: 'Tỉ lệ đạt',
-    value: `${compliancePercent.value}%`,
+    value: isInitialReportLoading.value ? '...' : `${compliancePercent.value}%`,
     icon: 'analytics-outline',
     note: `${totalPassedItems.value}/${totalCheckedItems.value} tiêu chí đạt`
   },
   {
     label: 'Thông báo mới',
-    value: unreadCount.value,
+    value: displayCount(unreadCount.value),
     icon: 'notifications-outline',
     note: 'Biên bản chưa mở'
   }
@@ -315,7 +332,12 @@ const openTemplateManager = type => {
   }
 
   loadTemplateEditor(type)
+  isTemplateMenuOpen.value = false
   openSection('templateManager')
+}
+
+const toggleTemplateMenu = () => {
+  isTemplateMenuOpen.value = !isTemplateMenuOpen.value
 }
 
 const updateTemplate = () => {
@@ -407,6 +429,9 @@ const scrollMainToTop = () => {
 
 const openSection = async section => {
   activeSection.value = section
+  if (section !== 'templateManager') {
+    isTemplateMenuOpen.value = false
+  }
   await nextTick()
   scrollMainToTop()
 }
@@ -1082,6 +1107,15 @@ watch(activeSection, async section => {
 <template>
   <div class="admin-layout" :class="{ 'intro-finished': !isAdminIntroLoading, 'is-signing-out': isSigningOut }">
     <AppToast :key="toast.key" :visible="toast.visible" :message="toast.message" :type="toast.type" />
+    <Transition name="signout-overlay">
+      <div v-if="isSigningOut" class="signout-overlay" aria-live="polite">
+        <div class="signout-card">
+          <span class="signout-spinner"></span>
+          <strong>Đang đăng xuất</strong>
+          <p>Đang đưa bạn về màn hình đăng nhập...</p>
+        </div>
+      </div>
+    </Transition>
     <button
       v-show="showMobileBackTop"
       type="button"
@@ -1145,21 +1179,31 @@ watch(activeSection, async section => {
           <span>Danh sách biên bản</span>
         </button>
 
-        <label
-          class="template-combo"
-          :class="{ active: activeSection === 'templateManager' }"
+        <div
+          class="template-menu"
+          :class="{ active: activeSection === 'templateManager', open: isTemplateMenuOpen }"
         >
-          <span>
+          <button type="button" class="template-menu-toggle" @click="toggleTemplateMenu">
             <ion-icon name="create-outline"></ion-icon>
             Quản lý biên bản
-          </span>
-          <select v-model="selectedTemplateType" @change="openTemplateManager(selectedTemplateType)">
-            <option disabled value="">Chọn mẫu đơn</option>
-            <option v-for="(label, type) in reportTypeLabels" :key="type" :value="type">
-              {{ label }}
-            </option>
-          </select>
-        </label>
+            <ion-icon class="template-menu-arrow" name="chevron-down-outline"></ion-icon>
+          </button>
+          <Transition name="template-menu-list">
+            <div v-if="isTemplateMenuOpen" class="template-menu-list">
+              <button
+                v-for="(label, type) in reportTypeLabels"
+                :key="type"
+                type="button"
+                class="template-menu-item"
+                :class="{ active: selectedTemplateType === type }"
+                @click="openTemplateManager(type)"
+              >
+                <ion-icon name="document-outline"></ion-icon>
+                <span>{{ label }}</span>
+              </button>
+            </div>
+          </Transition>
+        </div>
 
         <button
           type="button"
@@ -1212,6 +1256,20 @@ watch(activeSection, async section => {
       />
 
       <template v-else-if="activeSection === 'dashboard'">
+        <section v-if="isInitialReportLoading" class="reports-loading-panel dashboard-reveal dashboard-reveal-1">
+          <span class="reports-loading-spinner"></span>
+          <div>
+            <strong>Đang tải dữ liệu biên bản</strong>
+            <p>Hệ thống đang lấy dữ liệu từ cơ sở dữ liệu, vui lòng chờ trong giây lát.</p>
+          </div>
+        </section>
+        <section v-else-if="reportLoadError && !reports.length" class="reports-loading-panel is-error dashboard-reveal dashboard-reveal-1">
+          <ion-icon name="cloud-offline-outline"></ion-icon>
+          <div>
+            <strong>Chưa tải được dữ liệu</strong>
+            <p>{{ reportLoadError }}</p>
+          </div>
+        </section>
         <section class="dashboard-grid dashboard-reveal dashboard-reveal-1">
           <article
             v-for="(card, index) in dashboardCards"
@@ -1583,19 +1641,19 @@ watch(activeSection, async section => {
         <section class="summary-grid">
           <div class="summary-card">
             <span>Tổng biên bản</span>
-            <strong>{{ totalSubmitted }}</strong>
+            <strong>{{ displayCount(totalSubmitted) }}</strong>
           </div>
           <div class="summary-card">
             <span>Chờ xử lý</span>
-            <strong>{{ pendingCount }}</strong>
+            <strong>{{ displayCount(pendingCount) }}</strong>
           </div>
           <div class="summary-card">
             <span>Đã duyệt</span>
-            <strong>{{ approvedCount }}</strong>
+            <strong>{{ displayCount(approvedCount) }}</strong>
           </div>
           <div class="summary-card">
             <span>Thông báo mới</span>
-            <strong>{{ unreadCount }}</strong>
+            <strong>{{ displayCount(unreadCount) }}</strong>
           </div>
         </section>
 
@@ -1641,14 +1699,76 @@ watch(activeSection, async section => {
 }
 
 .admin-layout.is-signing-out {
+  pointer-events: none;
+}
+
+.admin-layout.is-signing-out .admin-sidebar,
+.admin-layout.is-signing-out .admin-main {
   opacity: 0;
   transform: translateY(14px) scale(0.985);
   filter: blur(5px);
-  pointer-events: none;
+  transition:
+    opacity 0.46s ease,
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.5s ease;
 }
 
 .mobile-back-top {
   display: none;
+}
+
+.signout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(238, 245, 251, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.signout-card {
+  display: grid;
+  justify-items: center;
+  width: min(320px, calc(100vw - 40px));
+  padding: 26px;
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+  text-align: center;
+}
+
+.signout-card strong {
+  margin-top: 14px;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.signout-card p {
+  margin: 8px 0 0;
+  color: #64748b;
+}
+
+.signout-spinner,
+.reports-loading-spinner {
+  display: inline-block;
+  width: 42px;
+  height: 42px;
+  border: 3px solid #bae6fd;
+  border-top-color: #0284c7;
+  border-radius: 50%;
+  animation: introSpin 0.85s linear infinite;
+}
+
+.signout-overlay-enter-active,
+.signout-overlay-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.signout-overlay-enter-from,
+.signout-overlay-leave-to {
+  opacity: 0;
 }
 
 .admin-intro-loader {
@@ -1886,11 +2006,12 @@ watch(activeSection, async section => {
   color: #075985;
 }
 
+.template-menu,
 .template-combo {
   display: grid;
   gap: 8px;
   width: 100%;
-  min-height: 64px;
+  min-height: 44px;
   padding: 10px 12px;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -1899,18 +2020,96 @@ watch(activeSection, async section => {
   font-weight: 800;
 }
 
+.template-menu.active,
 .template-combo.active {
   border-color: #7dd3fc;
   background: #e0f2fe;
   color: #075985;
 }
 
+.template-menu-toggle,
 .template-combo > span {
   display: inline-flex;
   align-items: center;
   gap: 10px;
 }
 
+.template-menu-toggle {
+  width: 100%;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template-menu-arrow {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.template-menu.open .template-menu-arrow {
+  transform: rotate(180deg);
+}
+
+.template-menu-list {
+  display: grid;
+  gap: 6px;
+  padding: 4px 0 0 28px;
+}
+
+.template-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.template-menu-item:hover,
+.template-menu-item.active {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #075985;
+  transform: translateX(2px);
+}
+
+.template-menu-list-enter-active,
+.template-menu-list-leave-active {
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.22s ease, max-height 0.24s ease;
+}
+
+.template-menu-list-enter-from,
+.template-menu-list-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.template-menu-list-enter-to,
+.template-menu-list-leave-from {
+  max-height: 220px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.template-menu ion-icon,
 .template-combo ion-icon {
   color: #0284c7;
   font-size: 1.15rem;
@@ -2006,6 +2205,41 @@ watch(activeSection, async section => {
 .dashboard-grid .dashboard-card {
   animation: dashboardCardEnter 0.68s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(0.18s + (var(--reveal-index, 0) * 0.08s));
+}
+
+.reports-loading-panel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  background: #f0f9ff;
+  color: #075985;
+  box-shadow: 0 12px 26px rgba(14, 165, 233, 0.1);
+}
+
+.reports-loading-panel.is-error {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.reports-loading-panel ion-icon {
+  flex: 0 0 auto;
+  font-size: 2rem;
+}
+
+.reports-loading-panel strong,
+.reports-loading-panel p {
+  margin: 0;
+}
+
+.reports-loading-panel p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 .dashboard-panel-card {
@@ -3380,6 +3614,7 @@ watch(activeSection, async section => {
     font-size: 0.92rem;
   }
 
+  .template-menu,
   .template-combo {
     grid-column: 1 / -1;
     min-height: auto;
@@ -3621,6 +3856,7 @@ watch(activeSection, async section => {
   }
 
   .admin-nav-btn,
+  .template-menu,
   .template-combo {
     width: 100%;
   }

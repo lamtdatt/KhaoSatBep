@@ -30,8 +30,13 @@ const reportTypes = [
 const typeLabels = Object.fromEntries(reportTypes.map(item => [item.type, item.label]))
 
 const loadReports = async () => {
-  await refreshReports()
   syncReportsFromCache()
+  try {
+    await refreshReports()
+    syncReportsFromCache()
+  } catch (error) {
+    console.error('Khong the tai thong ke nhan vien:', error)
+  }
 }
 
 const syncReportsFromCache = () => {
