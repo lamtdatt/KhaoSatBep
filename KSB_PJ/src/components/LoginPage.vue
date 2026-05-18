@@ -139,6 +139,7 @@ const handleLogin = async () => {
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 .login-section {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -150,6 +151,7 @@ const handleLogin = async () => {
   background-position: center 42%;
   background-size: 100% auto;
   font-family: 'Poppins', sans-serif;
+  isolation: isolate;
   opacity: 0;
   transform: translateY(-24px);
   transition:
@@ -178,6 +180,7 @@ const handleLogin = async () => {
 
 .form-box {
   position: relative;
+  z-index: 2;
   width: min(400px, 100%);
   min-height: 450px;
   background: rgba(0, 0, 0, 0.05);
@@ -472,8 +475,14 @@ button:disabled {
 
   .login-section::before {
     display: block;
-    height: 15svh;
-    background: linear-gradient(180deg, #e8eef3 0%, rgba(216, 235, 249, 0.74) 54%, rgba(216, 235, 249, 0) 100%);
+    z-index: 1;
+    height: clamp(96px, 15svh, 142px);
+    background:
+      linear-gradient(180deg, rgba(232, 239, 245, 0.98) 0%, rgba(220, 237, 249, 0.82) 48%, rgba(220, 237, 249, 0) 100%);
+    backdrop-filter: blur(8px) saturate(1.04);
+    -webkit-backdrop-filter: blur(8px) saturate(1.04);
+    mask-image: linear-gradient(180deg, #000 0%, #000 58%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 58%, transparent 100%);
   }
 
   .form-box {
