@@ -181,9 +181,11 @@ const isReviewPendingStatus = status => [
   'chưa duyệt'
 ].includes(normalizeStatus(status))
 const isPendingReviewReport = report => isReviewPendingStatus(report?.status)
+const isUnreadPendingReport = report => isPendingReviewReport(report) && !report.readByAdmin
 const reviewQueueReports = computed(() => reports.value.filter(isPendingReviewReport))
-const unreadCount = computed(() => reviewQueueReports.value.length)
-const latestNewReport = computed(() => reviewQueueReports.value[0] || null)
+const unreadPendingReports = computed(() => reports.value.filter(isUnreadPendingReport))
+const unreadCount = computed(() => unreadPendingReports.value.length)
+const latestNewReport = computed(() => unreadPendingReports.value[0] || null)
 const totalSubmitted = computed(() => reports.value.length)
 const approvedCount = computed(() => reports.value.filter(report => report.status === 'approved').length)
 const pendingCount = computed(() => reviewQueueReports.value.length)
@@ -211,7 +213,7 @@ const recentReports = computed(() => {
     ...report,
     label: reportTypeLabels[report.loaiBienBan] || report.loaiBienBan,
     time: new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN'),
-    isNew: isPendingReviewReport(report)
+    isNew: isUnreadPendingReport(report)
   }))
 })
 
@@ -472,12 +474,26 @@ const openSection = async section => {
     selectedId.value = ''
     selectedReport.value = null
   }
+  if (section === 'reports') {
+    await markPendingNotificationsSeen()
+  }
   await nextTick()
   scrollMainToTop()
 }
 
 const openNewReports = () => {
   openSection('reports')
+}
+
+const markPendingNotificationsSeen = async () => {
+  const unreadReports = reports.value.filter(isUnreadPendingReport)
+
+  if (!unreadReports.length) {
+    return
+  }
+
+  await Promise.all(unreadReports.map(report => markReportRead(report.id)))
+  reports.value = getReports()
 }
 
 const scrollToAdminTop = () => {
@@ -716,6 +732,24 @@ const getStatusLabel = status => ({
   reviewed: 'Đã chỉnh sửa',
   approved: 'Đã duyệt'
 })[status] || status || 'Chưa cập nhật'
+
+const getStatusClass = status => {
+  const normalized = normalizeStatus(status)
+
+  if (normalized === 'approved' || normalized === 'da duyet' || normalized === 'đã duyệt') {
+    return 'approved'
+  }
+
+  if (normalized === 'rejected' || normalized === 'tu choi' || normalized === 'từ chối' || normalized === 'khong dat' || normalized === 'không đạt') {
+    return 'rejected'
+  }
+
+  if (isReviewPendingStatus(status)) {
+    return 'submitted'
+  }
+
+  return 'reviewed'
+}
 
 const getResultText = item => {
   const values = [item.dat, item.cheDo1Dat, item.cheDo2Dat].filter(value => value === true || value === false)
@@ -1420,7 +1454,7 @@ watch(activeSection, async section => {
                 </em>
                 <span>{{ report.label }} - {{ report.time }}</span>
               </div>
-              <small>{{ report.status }}</small>
+              <small :class="`status-${getStatusClass(report.status)}`">{{ getStatusLabel(report.status) }}</small>
             </button>
           </div>
 
@@ -1492,12 +1526,12 @@ watch(activeSection, async section => {
                 :key="report.id"
                 type="button"
                 class="report-library-item"
-                :class="{ unread: !report.readByAdmin && report.status !== 'approved', active: report.id === selectedId, approved: report.status === 'approved' }"
+                :class="{ unread: isUnreadPendingReport(report), active: report.id === selectedId, approved: report.status === 'approved' }"
                 @click="selectReport(report)"
               >
                 <div class="report-library-topline">
                   <strong>{{ report.soBienBan }}</strong>
-                  <span>{{ getStatusLabel(report.status) }}</span>
+                  <span :class="`status-${getStatusClass(report.status)}`">{{ getStatusLabel(report.status) }}</span>
                 </div>
                 <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
                 <p>Ngày kiểm tra: {{ report.ngayKiemTra }}</p>
@@ -1646,12 +1680,12 @@ watch(activeSection, async section => {
                   :key="report.id"
                   type="button"
                   class="report-library-item review-queue-item"
-                  :class="{ unread: isPendingReviewReport(report), active: report.id === selectedId }"
+                  :class="{ unread: isUnreadPendingReport(report), active: report.id === selectedId }"
                   @click="selectReport(report)"
                 >
                   <div class="report-library-topline">
                     <strong>{{ report.soBienBan }}</strong>
-                    <span>{{ getStatusLabel(report.status) }}</span>
+                    <span :class="`status-${getStatusClass(report.status)}`">{{ getStatusLabel(report.status) }}</span>
                   </div>
                   <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
                   <p>Ngày kiểm tra: {{ report.ngayKiemTra }}</p>
@@ -1674,7 +1708,7 @@ watch(activeSection, async section => {
               <p>{{ reportTypeLabels[activeReport.loaiBienBan] || activeReport.loaiBienBan }} - {{ activeReport.ngayKiemTra }}</p>
             </div>
             <div class="report-head-actions">
-              <div class="status-pill">{{ activeReport.status }}</div>
+              <div class="status-pill" :class="`status-${getStatusClass(activeReport.status)}`">{{ getStatusLabel(activeReport.status) }}</div>
             </div>
           </div>
 
@@ -2825,6 +2859,34 @@ watch(activeSection, async section => {
   color: #075985;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.recent-item small.status-approved,
+.report-library-topline span.status-approved,
+.status-pill.status-approved {
+  background: #bbf7d0;
+  color: #166534;
+}
+
+.recent-item small.status-rejected,
+.report-library-topline span.status-rejected,
+.status-pill.status-rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.recent-item small.status-submitted,
+.report-library-topline span.status-submitted,
+.status-pill.status-submitted {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.recent-item small.status-reviewed,
+.report-library-topline span.status-reviewed,
+.status-pill.status-reviewed {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .dashboard-empty {
