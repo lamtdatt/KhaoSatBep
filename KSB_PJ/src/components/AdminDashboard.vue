@@ -20,6 +20,8 @@ const templateEditorDetails = ref([])
 const reportSearch = ref('')
 const reportDateFrom = ref('')
 const reportDateTo = ref('')
+const appliedReportDateFrom = ref('')
+const appliedReportDateTo = ref('')
 const reportStatusFilter = ref('')
 const adminMainRef = ref(null)
 const selectedReportSectionRef = ref(null)
@@ -283,7 +285,7 @@ const dashboardCards = computed(() => [
 ])
 
 const getReportDate = report => {
-  return report.submittedAt || report.updatedAt || report.ngayKiemTra || ''
+  return report.ngayKiemTra || report.submittedAt || report.updatedAt || ''
 }
 
 const isReportInDateRange = report => {
@@ -293,8 +295,8 @@ const isReportInDateRange = report => {
   }
 
   const reportDate = new Date(rawDate)
-  const fromDate = reportDateFrom.value ? new Date(`${reportDateFrom.value}T00:00:00`) : null
-  const toDate = reportDateTo.value ? new Date(`${reportDateTo.value}T23:59:59`) : null
+  const fromDate = appliedReportDateFrom.value ? new Date(`${appliedReportDateFrom.value}T00:00:00`) : null
+  const toDate = appliedReportDateTo.value ? new Date(`${appliedReportDateTo.value}T23:59:59`) : null
 
   if (fromDate && reportDate < fromDate) {
     return false
@@ -336,7 +338,14 @@ const resetReportFilters = () => {
   reportSearch.value = ''
   reportDateFrom.value = ''
   reportDateTo.value = ''
+  appliedReportDateFrom.value = ''
+  appliedReportDateTo.value = ''
   reportStatusFilter.value = ''
+}
+
+const applyReportDateFilter = () => {
+  appliedReportDateFrom.value = reportDateFrom.value
+  appliedReportDateTo.value = reportDateTo.value
 }
 
 const loadTemplateEditor = type => {
@@ -924,7 +933,7 @@ const exportPdf = () => {
         <h1>${escapeHtml(reportTypeLabels[report.loaiBienBan] || report.loaiBienBan)}</h1>
         <div class="meta">
           <div><strong>Số biên bản:</strong> ${escapeHtml(report.soBienBan)}</div>
-          <div><strong>Ngày kiểm tra:</strong> ${escapeHtml(report.ngayKiemTra)}</div>
+          <div><strong>Ngày kiểm tra:</strong> ${escapeHtml(formatDate(report.ngayKiemTra))}</div>
           <div><strong>Trạng thái:</strong> ${escapeHtml(report.status)}</div>
         </div>
         <div class="stats">Đạt: ${stats.datPercent}% | Không đạt: ${stats.khongDatPercent}% | Đã chấm: ${stats.total}</div>
@@ -1322,7 +1331,6 @@ watch(activeSection, async section => {
         <div>
           <span class="eyebrow">Bảng điều khiển quản trị</span>
           <h1>Quản lý biên bản kiểm tra</h1>
-          <p>Xem, chỉnh sửa, duyệt, ký điện tử và xuất PDF biên bản nhân viên gửi lên.</p>
         </div>
       </header>
 
@@ -1504,6 +1512,10 @@ watch(activeSection, async section => {
               </select>
             </label>
 
+            <button type="button" class="btn primary filter-apply" @click="applyReportDateFilter">
+              Lá»c
+            </button>
+
             <button type="button" class="btn secondary filter-reset" @click="resetReportFilters">
               Xóa lọc
             </button>
@@ -1534,7 +1546,7 @@ watch(activeSection, async section => {
                   <span :class="`status-${getStatusClass(report.status)}`">{{ getStatusLabel(report.status) }}</span>
                 </div>
                 <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
-                <p>Ngày kiểm tra: {{ report.ngayKiemTra }}</p>
+                <p>Ngày kiểm tra: {{ formatDate(report.ngayKiemTra) }}</p>
               </button>
             </div>
 
@@ -1688,7 +1700,7 @@ watch(activeSection, async section => {
                     <span :class="`status-${getStatusClass(report.status)}`">{{ getStatusLabel(report.status) }}</span>
                   </div>
                   <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
-                  <p>Ngày kiểm tra: {{ report.ngayKiemTra }}</p>
+                  <p>Ngày kiểm tra: {{ formatDate(report.ngayKiemTra) }}</p>
                 </button>
               </div>
             </article>
@@ -1705,7 +1717,7 @@ watch(activeSection, async section => {
           <div class="panel-head">
             <div>
               <h2>{{ activeReport.soBienBan }}</h2>
-              <p>{{ reportTypeLabels[activeReport.loaiBienBan] || activeReport.loaiBienBan }} - {{ activeReport.ngayKiemTra }}</p>
+              <p>{{ reportTypeLabels[activeReport.loaiBienBan] || activeReport.loaiBienBan }} - {{ formatDate(activeReport.ngayKiemTra) }}</p>
             </div>
             <div class="report-head-actions">
               <div class="status-pill" :class="`status-${getStatusClass(activeReport.status)}`">{{ getStatusLabel(activeReport.status) }}</div>
@@ -2944,7 +2956,7 @@ watch(activeSection, async section => {
 
 .report-filters {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 170px 170px 190px auto;
+  grid-template-columns: minmax(260px, 1fr) 170px 170px 190px auto auto;
   gap: 12px;
   align-items: end;
   min-width: 0;
@@ -3009,6 +3021,7 @@ watch(activeSection, async section => {
   background: transparent;
 }
 
+.filter-apply,
 .filter-reset {
   min-height: 42px;
 }
@@ -4332,6 +4345,7 @@ watch(activeSection, async section => {
     text-overflow: ellipsis;
   }
 
+  .filter-apply,
   .filter-reset {
     width: 100%;
     max-width: 100%;
