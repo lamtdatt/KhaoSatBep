@@ -4000,8 +4000,9 @@ watch(activeSection, async section => {
   .template-form-table tr {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px;
-    gap: 10px;
+    grid-template-columns: 72px 42px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
     margin-bottom: 10px;
     padding: 10px;
     border: 1px solid #dbe4ef;
@@ -4036,7 +4037,7 @@ watch(activeSection, async section => {
   .template-form-table td:nth-child(6) {
     grid-column: 2;
     grid-row: 1;
-    text-align: right;
+    text-align: left;
   }
 
   .template-order-input {
