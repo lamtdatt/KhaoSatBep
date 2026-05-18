@@ -1461,9 +1461,9 @@ watch(activeSection, async section => {
             </label>
 
             <label class="filter-field">
-              <span>Tráº¡ng thÃ¡i</span>
+              <span>Trạng thái</span>
               <select v-model="reportStatusFilter">
-                <option value="">Táº¥t cáº£ tráº¡ng thÃ¡i</option>
+                <option value="">Tất cả trạng thái</option>
                 <option v-for="option in reportStatusOptions" :key="option.value" :value="option.value">
                   {{ option.label }}
                 </option>
@@ -1627,10 +1627,10 @@ watch(activeSection, async section => {
         <section v-if="activeSection === 'reports'" class="review-queue-panel dashboard-reveal dashboard-reveal-1">
           <div class="report-library-head">
             <div>
-              <h2>BiÃªn báº£n cáº§n duyá»‡t</h2>
-              <p>Chá»‰ hiá»ƒn thá»‹ cÃ¡c biÃªn báº£n Ä‘ang á»Ÿ tráº¡ng thÃ¡i submitted/chá» duyá»‡t Ä‘á»ƒ admin xá»­ lÃ½.</p>
+              <h2>Biên bản cần duyệt</h2>
+              <p>Chỉ hiển thị các biên bản đang ở trạng thái submitted/chờ duyệt để admin xử lý.</p>
             </div>
-            <div class="report-total-pill">{{ reviewQueueReports.length }} cáº§n duyá»‡t</div>
+            <div class="report-total-pill">{{ reviewQueueReports.length }} cần duyệt</div>
           </div>
 
           <div v-if="reviewQueueReports.length" class="review-queue-groups">
@@ -1654,7 +1654,7 @@ watch(activeSection, async section => {
                     <span>{{ getStatusLabel(report.status) }}</span>
                   </div>
                   <small>{{ new Date(report.submittedAt || report.updatedAt).toLocaleString('vi-VN') }}</small>
-                  <p>NgÃ y kiá»ƒm tra: {{ report.ngayKiemTra }}</p>
+                  <p>Ngày kiểm tra: {{ report.ngayKiemTra }}</p>
                 </button>
               </div>
             </article>
@@ -1662,7 +1662,7 @@ watch(activeSection, async section => {
 
           <div v-else class="dashboard-empty">
             <ion-icon name="checkmark-done-outline"></ion-icon>
-            <p>Hiá»‡n khÃ´ng cÃ³ biÃªn báº£n nÃ o Ä‘ang chá» duyá»‡t.</p>
+            <p>Hiện không có biên bản nào đang chờ duyệt.</p>
           </div>
         </section>
 
