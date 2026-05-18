@@ -264,8 +264,8 @@ onUnmounted(() => {
 .subtitle { color: #475569; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
 .section-card h3 { margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; color: #0f172a; }
 .content-header, .section-topline { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; min-width: 0; }
 .glass-input, .glass-input-sm { width: 100%; max-width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; padding: 12px 16px; font-family: inherit; font-size: 0.95rem; }
 .glass-input-sm { padding: 8px 12px; font-size: 0.85rem; width: 100%; }
 .note-input { display: block; min-height: 44px; line-height: 1.45; resize: vertical; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -292,7 +292,9 @@ onUnmounted(() => {
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 768px) {
   .form-container { padding-bottom: max(320px, env(safe-area-inset-bottom)); }
-  .form-row { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 100%; }
+  .glass-card { overflow: hidden; }
+  input[type='date'].glass-input { width: 100%; max-width: 100%; min-width: 0; -webkit-appearance: none; appearance: none; }
   .thanh-phan-item, .content-header, .section-pager, .form-actions { flex-direction: column; align-items: stretch; }
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
   .glass-table { min-width: 760px; }

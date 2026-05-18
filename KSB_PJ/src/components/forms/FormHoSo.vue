@@ -229,8 +229,8 @@ onUnmounted(() => {
 .subtitle { color: #475569; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
 .section-card h3 { margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; color: #0f172a; }
 .section-topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.form-row, .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-row, .signature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+.form-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .form-group label { font-size: 0.9rem; font-weight: 600; color: #475569; }
 .glass-input, .glass-input-sm { width: 100%; max-width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; padding: 12px 16px; font-family: inherit; font-size: 0.95rem; }
 .glass-input-sm { padding: 8px 12px; font-size: 0.85rem; width: 100%; }
@@ -254,14 +254,21 @@ onUnmounted(() => {
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 768px) {
   .form-container { padding-bottom: max(320px, env(safe-area-inset-bottom)); }
-  .form-row, .signature-grid { grid-template-columns: 1fr; }
+  .form-row, .signature-grid { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 100%; }
+  .glass-card { overflow: hidden; }
+  input[type='date'].glass-input { width: 100%; max-width: 100%; min-width: 0; -webkit-appearance: none; appearance: none; }
   .thanh-phan-item {
     display: grid;
     grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) 38px;
     gap: 8px;
     align-items: center;
+    width: 100%;
+    max-width: 100%;
+    flex-direction: initial;
   }
   .thanh-phan-item .glass-input {
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
     padding: 9px 10px;
     font-size: 0.86rem;
@@ -278,6 +285,7 @@ onUnmounted(() => {
     width: 34px;
     height: 34px;
   }
+  .flex-1 { min-width: 0; }
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
   .glass-table { min-width: 760px; }
   .note-input { min-width: 180px; min-height: 72px; font-size: 0.95rem; }
