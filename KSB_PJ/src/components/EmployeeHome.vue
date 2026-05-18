@@ -3,6 +3,12 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getReports, refreshReports } from '@/utils/reportStore'
 
 const reports = ref([])
+const isLoadingReports = ref(true)
+const loadError = ref('')
+const hasLoadedOnce = ref(false)
+const summarySkeletons = Array.from({ length: 4 }, (_, index) => index)
+const chartSkeletons = Array.from({ length: 4 }, (_, index) => index)
+const activitySkeletons = Array.from({ length: 4 }, (_, index) => index)
 
 const reportTypes = [
   {
@@ -31,11 +37,23 @@ const typeLabels = Object.fromEntries(reportTypes.map(item => [item.type, item.l
 
 const loadReports = async () => {
   syncReportsFromCache()
+  isLoadingReports.value = true
+  loadError.value = ''
+
   try {
-    await refreshReports()
+    await Promise.race([
+      refreshReports(),
+      new Promise((_, reject) => {
+        window.setTimeout(() => reject(new Error('Máy chủ phản hồi chậm, dữ liệu sẽ được thử tải lại sau.')), 16000)
+      })
+    ])
     syncReportsFromCache()
   } catch (error) {
     console.error('Khong the tai thong ke nhan vien:', error)
+    loadError.value = error.message || 'Chưa tải được dữ liệu mới.'
+  } finally {
+    isLoadingReports.value = false
+    hasLoadedOnce.value = true
   }
 }
 
@@ -172,6 +190,7 @@ const recentActivities = computed(() => {
 })
 
 const maxValue = computed(() => Math.max(...overviewStats.value.map(item => item.value), 1))
+const shouldShowSkeleton = computed(() => isLoadingReports.value && !reports.value.length)
 
 onMounted(() => {
   loadReports()
@@ -186,9 +205,37 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="dashboard-home">
-    <section class="summary-grid">
-      <article v-for="card in summaryCards" :key="card.title" class="summary-card" :class="`tone-${card.tone}`">
+  <div class="dashboard-home" :class="{ 'is-loading': isLoadingReports, 'is-loaded': hasLoadedOnce && !isLoadingReports }">
+    <section v-if="loadError" class="dashboard-load-notice">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      <span>{{ loadError }}</span>
+      <button type="button" @click="loadReports">Thử lại</button>
+    </section>
+
+    <section v-if="isLoadingReports && reports.length" class="dashboard-refreshing">
+      <span class="refresh-dot"></span>
+      <span>Đang cập nhật dữ liệu mới...</span>
+    </section>
+
+    <section v-if="shouldShowSkeleton" class="summary-grid">
+      <article v-for="item in summarySkeletons" :key="`summary-skeleton-${item}`" class="summary-card skeleton-card" :style="{ '--reveal-delay': `${item * 0.08}s` }">
+        <span class="skeleton-block skeleton-icon"></span>
+        <div class="summary-content">
+          <span class="skeleton-block skeleton-line wide"></span>
+          <span class="skeleton-block skeleton-number"></span>
+          <span class="skeleton-block skeleton-line short"></span>
+        </div>
+      </article>
+    </section>
+
+    <section v-else class="summary-grid">
+      <article
+        v-for="(card, index) in summaryCards"
+        :key="card.title"
+        class="summary-card"
+        :class="`tone-${card.tone}`"
+        :style="{ '--reveal-delay': `${index * 0.08}s` }"
+      >
         <div class="summary-icon">
           <ion-icon :name="card.icon"></ion-icon>
         </div>
@@ -210,8 +257,19 @@ onUnmounted(() => {
           <p>Dữ liệu được tổng hợp từ các biên bản nhân viên đã gửi lên admin.</p>
         </div>
 
-        <div class="chart">
-          <div v-for="item in overviewStats" :key="item.label" class="chart-item">
+        <div v-if="shouldShowSkeleton" class="chart chart-skeleton">
+          <div v-for="item in chartSkeletons" :key="`chart-skeleton-${item}`" class="chart-item" :style="{ '--reveal-delay': `${item * 0.1}s` }">
+            <span class="skeleton-block skeleton-value"></span>
+            <div class="chart-bar-wrap">
+              <span class="skeleton-block skeleton-chart-bar" :style="{ height: `${42 + item * 12}%` }"></span>
+            </div>
+            <span class="skeleton-block skeleton-line"></span>
+            <span class="skeleton-block skeleton-line short"></span>
+          </div>
+        </div>
+
+        <div v-else class="chart">
+          <div v-for="(item, index) in overviewStats" :key="item.label" class="chart-item" :style="{ '--reveal-delay': `${index * 0.1}s` }">
             <span class="chart-value">{{ item.value }}</span>
             <div class="chart-bar-wrap">
               <div
@@ -238,8 +296,18 @@ onUnmounted(() => {
           <p>Các biên bản mới gửi và trạng thái xử lý sẽ xuất hiện tại đây.</p>
         </div>
 
-        <div v-if="recentActivities.length" class="activity-list">
-          <div v-for="activity in recentActivities" :key="activity.title" class="activity-item">
+        <div v-if="shouldShowSkeleton" class="activity-list">
+          <div v-for="item in activitySkeletons" :key="`activity-skeleton-${item}`" class="activity-item skeleton-activity" :style="{ '--reveal-delay': `${item * 0.08}s` }">
+            <div class="activity-copy">
+              <span class="skeleton-block skeleton-line wide"></span>
+              <span class="skeleton-block skeleton-line short"></span>
+            </div>
+            <span class="skeleton-block skeleton-pill"></span>
+          </div>
+        </div>
+
+        <div v-else-if="recentActivities.length" class="activity-list">
+          <div v-for="(activity, index) in recentActivities" :key="activity.title" class="activity-item" :style="{ '--reveal-delay': `${index * 0.07}s` }">
             <div class="activity-copy">
               <strong>{{ activity.title }}</strong>
               <span>{{ activity.time }}</span>
@@ -295,6 +363,48 @@ onUnmounted(() => {
   gap: 24px;
 }
 
+.dashboard-load-notice,
+.dashboard-refreshing {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.94);
+  color: #0369a1;
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.12);
+  animation: dashboardFadeUp 0.42s ease both;
+}
+
+.dashboard-load-notice {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.dashboard-load-notice button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #fb923c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.refresh-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #0ea5e9;
+  box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.42);
+  animation: refreshPulse 1.4s ease-in-out infinite;
+}
+
 .panel,
 .module-section {
   background: rgba(255, 255, 255, 0.94);
@@ -318,6 +428,8 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 16px 35px rgba(15, 23, 42, 0.06);
+  animation: dashboardFadeUp 0.56s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--reveal-delay, 0s);
 }
 
 .summary-icon {
@@ -421,6 +533,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   min-width: 0;
+  animation: dashboardFadeUp 0.56s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--reveal-delay, 0s);
 }
 
 .chart-value {
@@ -445,6 +559,8 @@ onUnmounted(() => {
   min-height: 0;
   border-radius: 18px 18px 8px 8px;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  transform-origin: bottom;
+  animation: chartGrow 0.76s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .chart-bar.empty {
@@ -481,6 +597,8 @@ onUnmounted(() => {
   border-radius: 18px;
   background: linear-gradient(135deg, #f8fbff, #f1f5f9);
   border: 1px solid rgba(148, 163, 184, 0.16);
+  animation: dashboardFadeUp 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--reveal-delay, 0s);
 }
 
 .activity-copy {
@@ -546,6 +664,7 @@ onUnmounted(() => {
 
 .module-section {
   padding: 24px;
+  animation: dashboardFadeUp 0.58s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .module-grid {
@@ -566,6 +685,111 @@ onUnmounted(() => {
   text-decoration: none;
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skeleton-card,
+.skeleton-activity {
+  pointer-events: none;
+}
+
+.skeleton-block {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.skeleton-block::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: skeletonShimmer 1.35s ease-in-out infinite;
+}
+
+.skeleton-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  flex: 0 0 auto;
+}
+
+.skeleton-line {
+  width: 140px;
+  height: 14px;
+}
+
+.skeleton-line.wide {
+  width: min(190px, 100%);
+}
+
+.skeleton-line.short {
+  width: 96px;
+}
+
+.skeleton-number {
+  width: 52px;
+  height: 30px;
+  border-radius: 12px;
+}
+
+.skeleton-value {
+  width: 34px;
+  height: 22px;
+  border-radius: 10px;
+}
+
+.skeleton-chart-bar {
+  width: min(88px, 100%);
+  align-self: flex-end;
+  border-radius: 18px 18px 8px 8px;
+}
+
+.skeleton-pill {
+  min-width: 110px;
+  height: 34px;
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes dashboardFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chartGrow {
+  from {
+    opacity: 0;
+    transform: scaleY(0.08);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes refreshPulse {
+  70% {
+    box-shadow: 0 0 0 8px rgba(14, 165, 233, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
 }
 
 .module-card:hover {
