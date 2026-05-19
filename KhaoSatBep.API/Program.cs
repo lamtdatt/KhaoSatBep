@@ -13,8 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 // ============================
 // 0. PORT CHO RENDER
 // ============================
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Render cung cấp biến PORT. Khi chạy local, để launchSettings.json tự quyết định port.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // ============================
 // 1. DATABASE (Supabase PostgreSQL)
