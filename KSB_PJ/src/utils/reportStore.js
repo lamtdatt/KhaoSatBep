@@ -268,7 +268,7 @@ const buildCreatePayload = report => {
       buaAnOngThong: (report.buaAnOngThong || []).join(', '),
       chiTiets: requirementRows.map(item => ({
         mucSo: item.mucSo,
-        phanNhom: 'III. Yêu cầu riêng',
+        phanNhom: item.phanNhom || 'Yêu cầu riêng',
         noiDung: `${item.noiDung}${item.moTa ? ` - ${item.moTa}` : ''}`,
         dat: item.dat,
         ghiChu: item.ghiChu || ''
