@@ -12,10 +12,7 @@ const DRAFT_KEY = 'bb_suatan'
 const form = ref({
   ngayKiemTra: new Date().toISOString().split('T')[0],
   thanhPhans: [
-    { stt: 1, hoTen: '', chucVu: '' },
-    { stt: 2, hoTen: '', chucVu: '' },
-    { stt: 3, hoTen: '', chucVu: '' },
-    { stt: 4, hoTen: '', chucVu: '' }
+    { stt: 1, hoTen: '', chucVu: '' }
   ],
   buaAn: [],
   buaAnOngThong: [],
@@ -501,7 +498,8 @@ onUnmounted(() => {
 .header-card h2 { margin: 0 0 10px; font-size: 1.8rem; color: #0f172a; }
 .subtitle { color: #475569; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
 .section-card h3 { margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; color: #0f172a; }
-.section-topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.thanh-phan-list { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+.section-topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
 .table-topline { margin-top: 16px; }
 .table-title { margin: 18px 0 10px; color: #0f172a; font-size: 1rem; }
 .table-topline .table-title { margin: 0; }
@@ -510,7 +508,7 @@ onUnmounted(() => {
 .glass-input, .glass-input-sm { width: 100%; max-width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; color: #1e293b; padding: 12px 16px; font-family: inherit; font-size: 0.95rem; }
 .glass-input-sm { padding: 8px 12px; font-size: 0.85rem; width: 100%; }
 .note-input { display: block; min-height: 44px; line-height: 1.45; resize: vertical; white-space: pre-wrap; overflow-wrap: anywhere; }
-.thanh-phan-item { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+.thanh-phan-item { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; padding: 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; }
 .stt-badge { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #fff7ed; color: #c2410c; border-radius: 50%; font-weight: 700; flex-shrink: 0; }
 .flex-1 { flex: 1; }
 .btn-icon { background: transparent; border: none; font-size: 1.5rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
@@ -549,7 +547,8 @@ onUnmounted(() => {
   .form-row, .option-grid { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 100%; }
   .glass-card { overflow: hidden; padding: 18px; }
   input[type='date'].glass-input { width: 100%; max-width: 100%; min-width: 0; -webkit-appearance: none; appearance: none; }
-  .thanh-phan-item, .form-actions { flex-direction: column; align-items: stretch; }
+  .thanh-phan-item { flex-direction: column; align-items: stretch; gap: 8px; }
+  .form-actions { flex-direction: column; align-items: stretch; }
   .section-topline { align-items: flex-start; flex-direction: column; }
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
   .glass-table { min-width: 980px; }
