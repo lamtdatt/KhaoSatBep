@@ -70,7 +70,13 @@ const removeThanhPhan = index => {
 const restoreDraft = () => {
   const draft = loadFormDraft(DRAFT_KEY)
   if (!draft) return
-  if (draft.form) form.value = draft.form
+  if (draft.form) {
+    const hasTypedData = draft.form.thanhPhans?.some(tp => tp.hoTen?.trim() !== '')
+    if (!hasTypedData) {
+      draft.form.thanhPhans = form.value.thanhPhans
+    }
+    form.value = draft.form
+  }
   if (Array.isArray(draft.items)) items.value = draft.items
 }
 
