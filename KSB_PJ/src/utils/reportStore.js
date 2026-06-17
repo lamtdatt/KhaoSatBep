@@ -345,11 +345,18 @@ const fetchReportSummaries = async () => {
 }
 
 export const refreshReports = async () => {
-  const response = await fetchReportSummaries()
   const existing = readReports()
 
-  if (!response.length && existing.length) {
-    return existing
+  let response
+  try {
+    response = await fetchReportSummaries()
+  } catch (error) {
+    // Chỉ fallback về cache khi mạng/API bị lỗi thực sự
+    if (existing.length) {
+      console.warn('API loi, su dung cache cu:', error)
+      return existing
+    }
+    throw error
   }
 
   const detailedById = new Map(
@@ -366,6 +373,7 @@ export const refreshReports = async () => {
     }
   })
 
+  // Ghi đè cache dù API trả về rỗng (phản ánh đúng trạng thái DB)
   writeReports(reports)
   return reports
 }
