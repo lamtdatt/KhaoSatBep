@@ -13,17 +13,13 @@ var builder = WebApplication.CreateBuilder(args);
 // ============================
 // 0. PORT CHO RENDER
 // ============================
-// Render cung cấp biến PORT. Khi chạy local, để launchSettings.json tự quyết định port.
-var port = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrWhiteSpace(port))
-{
-    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-}
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // ============================
 // 1. DATABASE (Supabase PostgreSQL)
 // ============================
-builder.Services.AddDbContextPool<AppDbContext>(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()));
@@ -57,27 +53,23 @@ builder.Services.AddAuthorization();
 // ============================
 // 3. CORS (cho phép Vue frontend)
 // ============================
-var configuredOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
-var allowedOrigins = configuredOrigins
-    .Concat([
-        "https://khaosatbep.io.vn",
-        "https://www.khaosatbep.io.vn",
-        "http://localhost:5173",
-        "http://localhost:3000"
-    ])
-    .Distinct(StringComparer.OrdinalIgnoreCase)
-    .ToArray();
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin =>
-                allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
-                Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                uri.Host.EndsWith(".khaosatbep.io.vn", StringComparison.OrdinalIgnoreCase))
+        policy.WithOrigins(
+                allowedOrigins ?? new[]
+                {
+                    "https://khaosatbep.io.vn",
+                    "https://www.khaosatbep.io.vn",
+                    "https://khao-sat-bep.vercel.app"
+                }
+            )
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -155,13 +147,8 @@ app.UseCors("VueFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => Results.Redirect("/swagger"));
-app.MapGet("/health", () => Results.Ok(new
-{
-    status = "ok",
-    app = "KhaoSatBep.API",
-    time = DateTimeOffset.UtcNow
-}));
+// Route test để biết API sống hay chưa
+app.MapGet("/", () => "KhaoSatBep API is running");
 
 app.MapControllers();
 
