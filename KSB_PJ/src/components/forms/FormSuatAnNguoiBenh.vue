@@ -220,12 +220,18 @@ const restoreDraft = () => {
     form.value = draft.form
   }
   if (Array.isArray(draft.rows)) {
-    rows.value = draft.rows.map(row => {
-      if (!row.dishes || row.dishes.length !== row.dishCount) {
-        const existingDishes = row.dishes || []
-        row.dishes = Array.from({ length: row.dishCount || 0 }, (_, idx) => existingDishes[idx] || '')
+    rows.value = rows.value.map(defaultRow => {
+      const draftRow = draft.rows.find(r => r.mucSo === defaultRow.mucSo)
+      if (draftRow) {
+        const existingDishes = draftRow.dishes || []
+        const dishes = Array.from({ length: defaultRow.dishCount }, (_, idx) => existingDishes[idx] || '')
+        return {
+          ...draftRow,
+          dishCount: defaultRow.dishCount,
+          dishes
+        }
       }
-      return row
+      return defaultRow
     })
   }
   if (Array.isArray(draft.tubeRows)) tubeRows.value = draft.tubeRows
