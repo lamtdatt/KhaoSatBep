@@ -3,7 +3,9 @@ import { clearAuthSession, getAccessToken } from '@/utils/authStore'
 const DEFAULT_API_BASE_URL = 'https://khaosatbep-api.onrender.com'
 const DEFAULT_TIMEOUT_MS = 45000
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
+// In dev mode, use Vite proxy (empty base URL); in production, use the full remote URL
+const resolvedBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : DEFAULT_API_BASE_URL)
+export const API_BASE_URL = resolvedBase.replace(/\/$/, '')
 
 const buildHeaders = customHeaders => {
   const headers = {

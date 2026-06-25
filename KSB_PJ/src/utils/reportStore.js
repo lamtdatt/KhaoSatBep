@@ -99,17 +99,37 @@ const normalizeChecklistItem = item => ({
   ghiChu: item.ghiChu ?? item.GhiChu ?? ''
 })
 
-const normalizeMealItem = item => ({
-  mucSo: item.stt ?? item.STT ?? 0,
-  phanNhom: item.loaiSuatAn === 'OngThong' ? 'II. Suất ăn qua ống thông' : 'I. Suất ăn đường miệng',
-  noiDung: item.noiDung ?? item.NoiDung ?? '',
-  ghiChuNoiDung: '',
-  cheDo1KhoiLuong: item.cheDoAn1KhoiLuong ?? item.CheDoAn1KhoiLuong ?? '',
-  cheDo1Dat: item.cheDoAn1Dat ?? item.CheDoAn1Dat ?? null,
-  cheDo2KhoiLuong: item.cheDoAn2KhoiLuong ?? item.CheDoAn2KhoiLuong ?? '',
-  cheDo2Dat: item.cheDoAn2Dat ?? item.CheDoAn2Dat ?? null,
-  ghiChu: ''
-})
+const normalizeMealItem = item => {
+  const rawNoiDung = item.noiDung ?? item.NoiDung ?? ''
+  let mainPart = rawNoiDung
+  let ghiChu = ''
+
+  if (rawNoiDung.includes(' | Ghi chú: ')) {
+    const parts = rawNoiDung.split(' | Ghi chú: ')
+    mainPart = parts[0]
+    ghiChu = parts[1] || ''
+  }
+
+  let category = mainPart
+  let ghiChuNoiDung = ''
+  if (mainPart.includes(': ')) {
+    const parts = mainPart.split(': ')
+    category = parts[0]
+    ghiChuNoiDung = parts.slice(1).join(': ') || ''
+  }
+
+  return {
+    mucSo: item.stt ?? item.STT ?? 0,
+    phanNhom: item.loaiSuatAn === 'OngThong' ? 'II. Suất ăn qua ống thông' : 'I. Suất ăn đường miệng',
+    noiDung: category,
+    ghiChuNoiDung: ghiChuNoiDung,
+    cheDo1KhoiLuong: item.cheDoAn1KhoiLuong ?? item.CheDoAn1KhoiLuong ?? '',
+    cheDo1Dat: item.cheDoAn1Dat ?? item.CheDoAn1Dat ?? null,
+    cheDo2KhoiLuong: item.cheDoAn2KhoiLuong ?? item.CheDoAn2KhoiLuong ?? '',
+    cheDo2Dat: item.cheDoAn2Dat ?? item.CheDoAn2Dat ?? null,
+    ghiChu: ghiChu
+  }
+}
 
 const normalizeSignature = item => ({
   viTri: item.viTri ?? item.ViTri ?? '',
@@ -277,7 +297,7 @@ const buildCreatePayload = report => {
         ...mealRows.map(item => ({
           stt: item.mucSo,
           loaiSuatAn: 'DuongMieng',
-          noiDung: item.noiDung,
+          noiDung: (item.noiDung || '') + (item.ghiChuNoiDung ? `: ${item.ghiChuNoiDung}` : '') + (item.ghiChu ? ` | Ghi chú: ${item.ghiChu}` : ''),
           cheDoAn1Ten: 'Chế độ ăn 1',
           cheDoAn1KhoiLuong: item.cheDo1KhoiLuong ? Number(item.cheDo1KhoiLuong) : null,
           cheDoAn1Dat: item.cheDo1Dat,
@@ -290,7 +310,7 @@ const buildCreatePayload = report => {
         ...tubeRows.map(item => ({
           stt: item.mucSo,
           loaiSuatAn: 'OngThong',
-          noiDung: item.noiDung,
+          noiDung: (item.noiDung || '') + (item.ghiChuNoiDung ? `: ${item.ghiChuNoiDung}` : '') + (item.ghiChu ? ` | Ghi chú: ${item.ghiChu}` : ''),
           cheDoAn1Ten: 'Chế độ ăn 1',
           cheDoAn1KhoiLuong: item.cheDo1KhoiLuong ? Number(item.cheDo1KhoiLuong) : null,
           cheDoAn1Dat: item.cheDo1Dat,

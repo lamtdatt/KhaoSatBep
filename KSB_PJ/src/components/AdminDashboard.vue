@@ -172,6 +172,25 @@ const activeReport = computed(() => {
 })
 
 const selectedStats = computed(() => getReportStats(activeReport.value))
+const isMealReport = computed(() => activeReport.value?.loaiBienBan === 'SuatAnNguoiBenh')
+
+const getMealResultText = item => {
+  const results = [
+    { label: 'CĐ1', value: item.cheDo1Dat },
+    { label: 'CĐ2', value: item.cheDo2Dat }
+  ].filter(r => r.value === true || r.value === false)
+
+  if (!results.length) return '—'
+  return results.map(r => `${r.label}: ${r.value ? 'Đạt' : 'KĐ'}`).join(' | ')
+}
+
+const getMealResultClass = item => {
+  const values = [item.cheDo1Dat, item.cheDo2Dat].filter(v => v === true || v === false)
+  if (!values.length) return 'result-empty'
+  if (values.every(Boolean)) return 'result-pass'
+  if (values.every(v => v === false)) return 'result-fail'
+  return 'result-mixed'
+}
 const normalizeStatus = status => String(status || '').trim().toLowerCase()
 const isReviewPendingStatus = status => [
   'submitted',
@@ -973,14 +992,40 @@ const exportPdfAdvanced = async () => {
   const details = report.chiTiets || []
   const approvedAt = report.approvedAt || (report.status === 'approved' ? report.updatedAt : '')
   const exportedAt = new Date().toISOString()
-  const rows = details.map(item => `
-    <tr>
-      <td class="text-center">${escapeHtml(item.mucSo)}</td>
-      <td>${escapeHtml(item.noiDung)}</td>
-      <td class="text-center result-cell ${getResultClass(item)}">${escapeHtml(getResultText(item) || '-')}</td>
-      <td>${escapeHtml(getReportNote(item) || '-')}</td>
-    </tr>
-  `).join('')
+  const isMeal = report.loaiBienBan === 'SuatAnNguoiBenh'
+  const rows = isMeal
+    ? details.map(item => {
+        const cd1Result = item.cheDo1Dat === true ? '<span class="result-pass">Đạt</span>'
+          : item.cheDo1Dat === false ? '<span class="result-fail">KĐ</span>' : '—'
+        const cd2Result = item.cheDo2Dat === true ? '<span class="result-pass">Đạt</span>'
+          : item.cheDo2Dat === false ? '<span class="result-fail">KĐ</span>' : '—'
+        const dishHtml = item.ghiChuNoiDung
+          ? item.ghiChuNoiDung.split(' - ').map(d => {
+              const hasMultiple = item.ghiChuNoiDung.split(' - ').length > 1;
+              return `<div style="margin: 2px 0;">${hasMultiple ? '- ' : ''}${escapeHtml(d)}</div>`;
+            }).join('')
+          : '—';
+        return `
+          <tr>
+            <td class="text-center">${escapeHtml(item.mucSo)}</td>
+            <td>${escapeHtml(item.noiDung)}</td>
+            <td>${dishHtml}</td>
+            <td class="text-center">${escapeHtml(item.cheDo1KhoiLuong || '—')}</td>
+            <td class="text-center result-cell">${cd1Result}</td>
+            <td class="text-center">${escapeHtml(item.cheDo2KhoiLuong || '—')}</td>
+            <td class="text-center result-cell">${cd2Result}</td>
+            <td>${escapeHtml(item.ghiChu || '')}</td>
+          </tr>
+        `
+      }).join('')
+    : details.map(item => `
+        <tr>
+          <td class="text-center">${escapeHtml(item.mucSo)}</td>
+          <td>${escapeHtml(item.noiDung)}</td>
+          <td class="text-center result-cell ${getResultClass(item)}">${escapeHtml(getResultText(item) || '-')}</td>
+          <td>${escapeHtml(getReportNote(item) || '-')}</td>
+        </tr>
+      `).join('')
   const participantRows = (report.thanhPhans || [])
     .filter(item => item.hoTen || item.chucVu)
     .map(item => `
@@ -1107,10 +1152,21 @@ const exportPdfAdvanced = async () => {
           <table>
             <thead>
               <tr>
-                <th style="width: 52px;">TT</th>
-                <th>Nội dung kiểm tra</th>
-                <th style="width: 112px;">Kết quả</th>
-                <th style="width: 176px;">Ghi chú</th>
+                ${isMeal ? `
+                  <th style="width: 36px;">TT</th>
+                  <th style="width: 100px;">Nội dung</th>
+                  <th>Tên món ăn thực tế</th>
+                  <th style="width: 64px;">CĐ1 KL (g)</th>
+                  <th style="width: 54px;">CĐ1</th>
+                  <th style="width: 64px;">CĐ2 KL (g)</th>
+                  <th style="width: 54px;">CĐ2</th>
+                  <th style="width: 100px;">Ghi chú</th>
+                ` : `
+                  <th style="width: 52px;">TT</th>
+                  <th>Nội dung kiểm tra</th>
+                  <th style="width: 112px;">Kết quả</th>
+                  <th style="width: 176px;">Ghi chú</th>
+                `}
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -1735,7 +1791,57 @@ watch(activeSection, async section => {
             </div>
           </div>
 
-          <div class="table-wrap">
+          <!-- Bảng chi tiết cho Suất ăn người bệnh -->
+          <div v-if="isMealReport" class="table-wrap meal-review-wrap">
+            <table class="review-table meal-review-table">
+              <thead>
+                <tr>
+                  <th class="col-tt">TT</th>
+                  <th class="col-content">Nội dung</th>
+                  <th class="col-dish">Tên món ăn thực tế</th>
+                  <th class="col-weight">CĐ1 KL (g)</th>
+                  <th class="col-result">CĐ1</th>
+                  <th class="col-weight">CĐ2 KL (g)</th>
+                  <th class="col-result">CĐ2</th>
+                  <th class="col-note">Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="detail in activeReport.chiTiets" :key="`meal-${detail.mucSo}`">
+                  <td class="text-center">{{ detail.mucSo }}</td>
+                  <td>
+                    <small v-if="detail.phanNhom">{{ detail.phanNhom }}</small>
+                    <span class="meal-category">{{ detail.noiDung }}</span>
+                  </td>
+                  <td class="meal-dish-cell">
+                    <div v-if="detail.ghiChuNoiDung" class="dashboard-dishes-list">
+                      <div v-for="(dish, dIdx) in detail.ghiChuNoiDung.split(' - ')" :key="dIdx" class="dashboard-dish-item">
+                        <span class="dish-bullet" v-if="detail.ghiChuNoiDung.split(' - ').length > 1">-</span>
+                        <span>{{ dish }}</span>
+                      </div>
+                    </div>
+                    <span v-else>—</span>
+                  </td>
+                  <td class="text-center">{{ detail.cheDo1KhoiLuong || '—' }}</td>
+                  <td class="text-center">
+                    <span v-if="detail.cheDo1Dat === true" class="result-tag result-pass">Đạt</span>
+                    <span v-else-if="detail.cheDo1Dat === false" class="result-tag result-fail">KĐ</span>
+                    <span v-else class="result-tag result-empty">—</span>
+                  </td>
+                  <td class="text-center">{{ detail.cheDo2KhoiLuong || '—' }}</td>
+                  <td class="text-center">
+                    <span v-if="detail.cheDo2Dat === true" class="result-tag result-pass">Đạt</span>
+                    <span v-else-if="detail.cheDo2Dat === false" class="result-tag result-fail">KĐ</span>
+                    <span v-else class="result-tag result-empty">—</span>
+                  </td>
+                  <td>{{ detail.ghiChu || '' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Bảng chi tiết cho các loại biên bản khác -->
+          <div v-else class="table-wrap">
             <table class="review-table">
               <thead>
                 <tr>
@@ -3823,6 +3929,99 @@ watch(activeSection, async section => {
   opacity: 1;
 }
 
+/* Meal-specific review table overrides */
+.meal-review-wrap {
+  max-height: 640px;
+}
+
+.meal-review-table {
+  table-layout: auto;
+}
+
+.meal-review-table .col-tt {
+  width: 48px;
+}
+
+.meal-review-table .col-content {
+  width: 130px;
+}
+
+.meal-review-table .col-dish {
+  width: auto;
+  min-width: 120px;
+}
+
+.meal-review-table .col-weight {
+  width: 78px;
+}
+
+.meal-review-table .col-result {
+  width: 62px;
+}
+
+.meal-review-table .col-note {
+  width: 130px;
+}
+
+.meal-review-table th,
+.meal-review-table td {
+  padding: 10px 8px;
+  font-size: 0.82rem;
+}
+
+.meal-review-table th:nth-child(n),
+.meal-review-table td:nth-child(n) {
+  width: auto;
+  text-align: left;
+}
+
+.meal-review-table small {
+  display: block;
+  margin-bottom: 2px;
+  color: #0284c7;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.meal-category {
+  display: block;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.meal-dish-cell {
+  color: #334155;
+  font-size: 0.82rem;
+}
+
+.result-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.result-tag.result-pass {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.result-tag.result-fail {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.result-tag.result-empty {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.text-center {
+  text-align: center;
+}
+
 .form-signatures {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4785,4 +4984,7 @@ watch(activeSection, async section => {
     max-width: 100%;
   }
 }
+.dashboard-dishes-list { display: flex; flex-direction: column; gap: 4px; }
+.dashboard-dish-item { display: flex; align-items: center; gap: 6px; }
+.dish-bullet { font-weight: bold; color: #64748b; font-size: 0.85rem; }
 </style>

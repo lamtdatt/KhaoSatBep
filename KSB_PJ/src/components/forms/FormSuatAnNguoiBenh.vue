@@ -24,9 +24,11 @@ const form = ref({
 const mealOptions = ['Sáng', 'Trưa', 'Xế', 'Chiều', 'Tối']
 const tubeMealOptions = ['Sáng', 'Trưa', 'Xế', 'Chiều']
 
-const makeMealRow = (mucSo, noiDung = '') => ({
+const makeMealRow = (mucSo, noiDung = '', dishCount = 1) => ({
   mucSo,
   noiDung,
+  dishCount,
+  dishes: Array.from({ length: dishCount }, () => ''),
   ghiChuNoiDung: '',
   cheDo1KhoiLuong: '',
   cheDo1Dat: null,
@@ -100,16 +102,20 @@ const oralRequirementDefinitions = [
 ]
 
 const rows = ref([
-  makeMealRow(1, 'Cơm'),
-  makeMealRow(2, 'Món mặn'),
-  makeMealRow(3, 'Món chay'),
-  makeMealRow(4, 'Món xào/luộc'),
-  makeMealRow(5, 'Món canh')
+  makeMealRow(1, 'Cơm', 0),
+  makeMealRow(2, 'Món mặn', 4),
+  makeMealRow(3, 'Món chay', 2),
+  makeMealRow(4, 'Món xào/luộc', 1),
+  makeMealRow(5, 'Món canh', 1),
+  makeMealRow(6, 'Tráng miệng', 1),
+  makeMealRow(7, 'Cháo mặn', 0),
+  makeMealRow(8, 'Cháo chay', 0),
+  makeMealRow(9, 'Món nước', 2)
 ])
 
 applyReportTemplate('SuatAnNguoiBenh', rows.value)
 
-const tubeRows = ref(Array.from({ length: 6 }, (_, index) => makeMealRow(index + 1)))
+const tubeRows = ref(Array.from({ length: 6 }, (_, index) => makeMealRow(index + 1, `Bữa ăn ${index + 1}`, 1)))
 
 const oralRequirementRows = ref(
   oralRequirementDefinitions.map((item, index) =>
@@ -213,13 +219,30 @@ const restoreDraft = () => {
     }
     form.value = draft.form
   }
-  if (Array.isArray(draft.rows)) rows.value = draft.rows
+  if (Array.isArray(draft.rows)) {
+    rows.value = draft.rows.map(row => {
+      if (!row.dishes || row.dishes.length !== row.dishCount) {
+        const existingDishes = row.dishes || []
+        row.dishes = Array.from({ length: row.dishCount || 0 }, (_, idx) => existingDishes[idx] || '')
+      }
+      return row
+    })
+  }
   if (Array.isArray(draft.tubeRows)) tubeRows.value = draft.tubeRows
   normalizeRequirementDraft(draft)
 }
 
 const submitForm = async () => {
   isSubmitting.value = true
+
+  // Set ghiChuNoiDung for oral meal rows
+  rows.value.forEach(row => {
+    if (row.dishes && row.dishes.length) {
+      row.ghiChuNoiDung = row.dishes.filter(d => d.trim() !== '').join(' - ')
+    } else {
+      row.ghiChuNoiDung = ''
+    }
+  })
 
   try {
     await saveReport({
@@ -345,10 +368,22 @@ onUnmounted(() => {
             </thead>
             <tbody>
               <tr v-for="row in rows" :key="row.mucSo">
+                <!-- TT -->
                 <td class="text-center">{{ row.mucSo }}</td>
-                <td>
-                  <strong>{{ row.noiDung }}</strong>
-                  <textarea v-model="row.ghiChuNoiDung" rows="2" class="glass-input-sm note-input" placeholder="Mô tả thêm nếu cần..." @focus="scrollFocusedFieldIntoView"></textarea>
+                <!-- Nội dung + dotted lines for dish names -->
+                <td class="noi-dung-cell">
+                  <strong>{{ row.noiDung }}{{ row.dishCount > 0 ? ':' : '' }}</strong>
+                  <div v-if="row.dishCount > 0" class="dotted-lines">
+                    <div v-for="(dish, dIdx) in row.dishes" :key="dIdx" class="dotted-line-item">
+                      <input
+                        v-model="row.dishes[dIdx]"
+                        type="text"
+                        class="dotted-line-input"
+                        :placeholder="' '"
+                        @focus="scrollFocusedFieldIntoView"
+                      />
+                    </div>
+                  </div>
                 </td>
                 <td><input v-model="row.cheDo1KhoiLuong" type="text" class="glass-input-sm" placeholder="g" /></td>
                 <td class="text-center"><input v-model="row.cheDo1Dat" type="radio" :name="`cd1_${row.mucSo}`" :value="true" /></td>
@@ -357,7 +392,7 @@ onUnmounted(() => {
                 <td class="text-center"><input v-model="row.cheDo2Dat" type="radio" :name="`cd2_${row.mucSo}`" :value="true" /></td>
                 <td class="text-center"><input v-model="row.cheDo2Dat" type="radio" :name="`cd2_${row.mucSo}`" :value="false" /></td>
                 <td>
-                  <textarea v-model="row.ghiChu" rows="2" class="glass-input-sm note-input" placeholder="Ghi chú..." @focus="scrollFocusedFieldIntoView"></textarea>
+                  <textarea v-model="row.ghiChu" rows="1" class="glass-input-sm note-input" placeholder="Ghi chú..." @focus="scrollFocusedFieldIntoView"></textarea>
                 </td>
               </tr>
             </tbody>
@@ -529,8 +564,8 @@ onUnmounted(() => {
 .glass-table th, .glass-table td { padding: 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
 .glass-table th { background: #f8fafc; text-align: center; font-weight: 600; color: #475569; }
 .meal-table th:nth-child(1), .meal-table td:nth-child(1) { width: 58px; }
-.meal-table th:nth-child(2), .meal-table td:nth-child(2) { min-width: 190px; }
-.meal-table th:nth-child(3), .meal-table th:nth-child(6) { min-width: 140px; }
+.meal-table th:nth-child(2), .meal-table td:nth-child(2) { min-width: 240px; }
+.meal-table th:nth-child(3), .meal-table th:nth-child(6) { min-width: 120px; }
 .meal-table th:nth-child(4), .meal-table th:nth-child(5), .meal-table th:nth-child(7), .meal-table th:nth-child(8) { min-width: 86px; }
 .meal-table th:nth-child(9), .meal-table td:nth-child(9) { min-width: 150px; }
 .tube-table th:nth-child(9), .tube-table td:nth-child(9) { min-width: 52px; }
@@ -557,9 +592,28 @@ onUnmounted(() => {
   .form-actions { flex-direction: column; align-items: stretch; }
   .section-topline { align-items: flex-start; flex-direction: column; }
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
-  .glass-table { min-width: 980px; }
+  .glass-table { min-width: 880px; }
   .requirement-table { min-width: 760px; }
   .note-input { min-width: 180px; min-height: 72px; font-size: 0.95rem; }
   .glass-input:focus, .glass-input-sm:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18); outline: none; }
 }
+/* Nội dung cell with dotted lines (matching paper form) */
+.noi-dung-cell { vertical-align: top !important; }
+.noi-dung-cell strong { color: #0f172a; font-size: 0.9rem; display: block; margin-bottom: 2px; }
+.dotted-lines { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+.dotted-line-item { display: flex; align-items: center; }
+.dotted-line-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px dashed #94a3b8;
+  background: transparent;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: #1e293b;
+  outline: none;
+  line-height: 1.5;
+}
+.dotted-line-input::placeholder { color: #cbd5e1; letter-spacing: 1px; font-size: 0.8rem; }
+.dotted-line-input:focus { border-bottom-color: #0ea5e9; background: rgba(14, 165, 233, 0.04); }
 </style>
