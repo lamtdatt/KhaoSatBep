@@ -73,7 +73,7 @@ const restoreDraft = () => {
   if (draft.form) {
     const hasTypedData = draft.form.thanhPhans?.some(tp => tp.hoTen?.trim() !== '')
     if (!hasTypedData) {
-      draft.form.thanhPhans = form.value.thanhPhans
+      draft.form.thanhPhans = [{ stt: 1, hoTen: '', chucVu: '' }]
     }
     form.value = draft.form
   }

@@ -993,6 +993,7 @@ const exportPdfAdvanced = async () => {
   const approvedAt = report.approvedAt || (report.status === 'approved' ? report.updatedAt : '')
   const exportedAt = new Date().toISOString()
   const isMeal = report.loaiBienBan === 'SuatAnNguoiBenh'
+  let currentGroup = ''
   const rows = isMeal
     ? details.map(item => {
         const cd1Result = item.cheDo1Dat === true ? '<span class="result-pass">Đạt</span>'
@@ -1018,14 +1019,21 @@ const exportPdfAdvanced = async () => {
           </tr>
         `
       }).join('')
-    : details.map(item => `
-        <tr>
-          <td class="text-center">${escapeHtml(item.mucSo)}</td>
-          <td>${escapeHtml(item.noiDung)}</td>
-          <td class="text-center result-cell ${getResultClass(item)}">${escapeHtml(getResultText(item) || '-')}</td>
-          <td>${escapeHtml(getReportNote(item) || '-')}</td>
-        </tr>
-      `).join('')
+    : details.map(item => {
+        let groupHtml = ''
+        if (item.phanNhom && item.phanNhom !== currentGroup) {
+          currentGroup = item.phanNhom
+          groupHtml = `<tr class="group-header"><td colspan="4"><strong>${escapeHtml(currentGroup)}</strong></td></tr>`
+        }
+        return groupHtml + `
+          <tr>
+            <td class="text-center">${escapeHtml(item.mucSo)}</td>
+            <td>${escapeHtml(item.noiDung)}</td>
+            <td class="text-center result-cell ${getResultClass(item)}">${escapeHtml(getResultText(item) || '-')}</td>
+            <td>${escapeHtml(getReportNote(item) || '-')}</td>
+          </tr>
+        `
+      }).join('')
   const participantRows = (report.thanhPhans || [])
     .filter(item => item.hoTen || item.chucVu)
     .map(item => `
@@ -1050,7 +1058,7 @@ const exportPdfAdvanced = async () => {
         <style>
           @page { size: A4; margin: 14mm 12mm; }
           * { box-sizing: border-box; }
-          body { margin: 0; font-family: "Times New Roman", Times, serif; color: #111827; background: #ffffff; font-size: 12px; }
+          body { margin: 0; font-family: "Times New Roman", Times, serif; color: #111827; background: #ffffff; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .document { max-width: 980px; margin: 0 auto; }
           .letterhead { display: grid; grid-template-columns: 92px 1fr 220px; gap: 16px; align-items: center; padding-bottom: 12px; border-bottom: 2px solid #0f766e; }
           .logo { width: 78px; height: 78px; object-fit: contain; }
@@ -1066,10 +1074,11 @@ const exportPdfAdvanced = async () => {
           .meta-card { min-height: 58px; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 6px; }
           .meta-card span { display: block; color: #64748b; font-size: 11px; }
           .meta-card b { display: block; margin-top: 5px; font-size: 13px; }
-          .section-title { margin: 18px 0 8px; font-size: 14px; font-weight: 700; text-transform: uppercase; }
+          .section-title { margin: 18px 0 8px; font-size: 14px; font-weight: 700; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
           table { width: 100%; border-collapse: collapse; table-layout: fixed; page-break-inside: auto; }
           thead { display: table-header-group; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
+          tr { page-break-inside: avoid; break-inside: avoid; }
+          .group-header td { background: #e2e8f0 !important; color: #0f172a; font-weight: 700; font-size: 12px; padding: 8px 9px; page-break-after: avoid; break-after: avoid; }
           th, td { border: 1px solid #9aaec9; padding: 8px 9px; vertical-align: top; word-break: break-word; }
           th { background: #f3f8fb; color: #111827; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0; }
           td { color: #1f2937; line-height: 1.5; font-size: 11.25px; font-weight: 400; }
@@ -1081,14 +1090,14 @@ const exportPdfAdvanced = async () => {
           .result-fail { color: #b91c1c; }
           .result-mixed { color: #92400e; }
           .result-empty { color: #64748b; }
-          .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+          .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; page-break-inside: avoid; break-inside: avoid; }
           .summary div { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; }
           .summary span { display: block; color: #64748b; font-size: 11px; }
           .summary b { display: block; margin-top: 5px; font-size: 18px; }
-          .opinion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+          .opinion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; page-break-inside: avoid; break-inside: avoid; }
           .opinion-box { min-height: 76px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; }
           .opinion-box strong { display: block; margin-bottom: 6px; }
-          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 42px; margin-top: 34px; text-align: center; page-break-inside: avoid; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 42px; margin-top: 34px; text-align: center; page-break-inside: avoid; break-inside: avoid; }
           .signature-box strong, .signature-box b, .signature-box span { display: block; margin-top: 4px; }
           .signature-date { min-height: 16px; color: #64748b; font-size: 11px; }
           .signature-box img { display: block; width: 230px; height: 96px; object-fit: contain; margin: 12px auto 8px; border-bottom: 1px solid #cbd5e1; }
