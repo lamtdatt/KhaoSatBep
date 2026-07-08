@@ -8,7 +8,9 @@ const REPORT_TYPE_LABELS = {
   CoSoHaTang: 'Cơ sở hạ tầng',
   HoSo: 'Hồ sơ sổ sách',
   VeSinh: 'Vệ sinh ATTP',
-  SuatAnNguoiBenh: 'Suất ăn người bệnh'
+  SuatAnNguoiBenh: 'Suất ăn người bệnh',
+  GhiNhanSuViec: 'Ghi nhận sự việc',
+  BangKiemDinhDuong: 'Bảng kiểm dinh dưỡng'
 }
 
 const router = useRouter()
@@ -54,6 +56,16 @@ const navigationItems = [
     to: '/employee/bb-suatan',
     icon: 'restaurant-outline',
     label: 'Suất ăn người bệnh'
+  },
+  {
+    to: '/employee/bb-ghinhan',
+    icon: 'create-outline',
+    label: 'Ghi nhận sự việc'
+  },
+  {
+    to: '/employee/bb-dinhduong',
+    icon: 'clipboard-outline',
+    label: 'Bảng kiểm dinh dưỡng'
   },
   {
     to: '/employee/chu-ky',

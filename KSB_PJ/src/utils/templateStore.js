@@ -76,6 +76,25 @@ const DEFAULT_TEMPLATES = {
     item(7, 'Cháo mặn'),
     item(8, 'Cháo chay'),
     item(9, 'Món nước')
+  ]),
+  GhiNhanSuViec: makeTemplate('GhiNhanSuViec', [
+    item(1, 'Thời gian', 'I. Hành chính'),
+    item(2, 'Địa điểm', 'I. Hành chính'),
+    item(3, 'Đại diện đơn vị cung cấp', 'I. Hành chính - Thành phần'),
+    item(4, 'Thành viên kiểm tra VSATTP', 'I. Hành chính - Thành phần'),
+    item(5, 'Nội dung vi phạm', 'II. Nội dung'),
+    item(6, 'Xác định nguyên nhân', 'II. Nội dung'),
+    item(7, 'Biện pháp khắc phục, phòng ngừa', 'II. Nội dung')
+  ]),
+  BangKiemDinhDuong: makeTemplate('BangKiemDinhDuong', [
+    item(1, 'Hồ sơ bệnh án có dán phiếu ĐGTTDD'),
+    item(2, 'Cân, đo, tính BMI (điều dưỡng)'),
+    item(3, 'Đánh giá tình trạng dinh dưỡng (bác sĩ)'),
+    item(4, 'Mã chế độ ăn (bác sĩ)'),
+    item(5, 'Bác sĩ, điều dưỡng hướng dẫn chế độ ăn người bệnh (phỏng vấn người bệnh)'),
+    item(6, 'Nắm được thông tư 18/BYT-2011'),
+    item(7, 'Trang thiết bị (thước dây, cân)'),
+    item(8, 'Ý kiến về suất ăn')
   ])
 }
 

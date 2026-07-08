@@ -130,7 +130,9 @@ const reportTypeLabels = {
   CoSoHaTang: 'Cơ sở hạ tầng',
   HoSo: 'Hồ sơ sổ sách',
   VeSinh: 'Vệ sinh ATTP',
-  SuatAnNguoiBenh: 'Suất ăn người bệnh'
+  SuatAnNguoiBenh: 'Suất ăn người bệnh',
+  GhiNhanSuViec: 'Ghi nhận sự việc',
+  BangKiemDinhDuong: 'Bảng kiểm dinh dưỡng'
 }
 
 const applyReportsFromCache = () => {
@@ -432,6 +434,14 @@ const templateMeta = computed(() => {
     SuatAnNguoiBenh: {
       title: 'Biên bản kiểm tra Suất ăn người bệnh',
       subtitle: 'Tại bộ phận chế biến và cung cấp suất ăn'
+    },
+    GhiNhanSuViec: {
+      title: 'Biên bản ghi nhận sự việc',
+      subtitle: 'Khoa Dinh Dưỡng - BV Hoàn Mỹ Đồng Nai'
+    },
+    BangKiemDinhDuong: {
+      title: 'Bảng kiểm dinh dưỡng',
+      subtitle: 'Thành phần tham gia buổi làm việc và nội dung đánh giá'
     }
   }
 
@@ -859,6 +869,250 @@ const renderSignature = (profile, title, signedAt = '') => {
   `
 }
 
+const getDetailValue = (report, label) => {
+  const target = String(label || '').trim().toLowerCase()
+  const detail = (report?.chiTiets || []).find(item => String(item.noiDung || '').trim().toLowerCase() === target)
+  return detail?.ghiChu || ''
+}
+
+const getDateParts = value => {
+  const date = value ? new Date(value) : new Date()
+  if (Number.isNaN(date.getTime())) {
+    return { day: '...', month: '...', year: '...' }
+  }
+
+  return {
+    day: String(date.getDate()).padStart(2, '0'),
+    month: String(date.getMonth() + 1).padStart(2, '0'),
+    year: String(date.getFullYear())
+  }
+}
+
+const writePrintDocument = async (report, exportedAt, html, message = 'Đã mở bản in PDF chuẩn hồ sơ.') => {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    showToast('Trình duyệt đang chặn cửa sổ xuất PDF. Vui lòng cho phép pop-up rồi thử lại.')
+    return
+  }
+
+  printWindow.document.write(html)
+  printWindow.document.close()
+  await updateReport(report.id, { exportedAt })
+  await loadReports()
+  showToast(message)
+}
+
+const exportIncidentPaper = async (report, exportedAt) => {
+  const date = getDateParts(report.ngayKiemTra)
+  const thoiGian = getDetailValue(report, 'Thời gian')
+  const diaDiem = getDetailValue(report, 'Địa điểm')
+  const daiDien = getDetailValue(report, 'Đại diện đơn vị cung cấp')
+  const thanhVien = getDetailValue(report, 'Thành viên kiểm tra VSATTP')
+  const noiDung = getDetailValue(report, 'Nội dung vi phạm')
+  const nguyenNhan = getDetailValue(report, 'Xác định nguyên nhân')
+  const bienPhap = getDetailValue(report, 'Biện pháp khắc phục, phòng ngừa')
+
+  await writePrintDocument(report, exportedAt, `
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(report.soBienBan || 'Bien-ban-ghi-nhan')}</title>
+        <style>
+          @page { size: A4; margin: 16mm 18mm; }
+          * { box-sizing: border-box; }
+          body { margin: 0; font-family: "Times New Roman", Times, serif; color: #111827; background: #ffffff; font-size: 16px; }
+          .document { max-width: 760px; margin: 0 auto; }
+          .head { display: grid; grid-template-columns: 1fr 1.35fr; gap: 34px; align-items: start; text-align: center; }
+          .head strong { display: block; font-weight: 700; }
+          .head span { display: block; margin-top: 7px; font-weight: 700; }
+          .dash { margin-top: 10px; letter-spacing: 1px; font-weight: 700; }
+          .doc-no { display: flex; gap: 6px; margin-top: 18px; text-align: left; }
+          .doc-no b { min-width: 128px; border-bottom: 1px dotted #111827; font-weight: 400; }
+          .date { margin-top: 22px; font-style: italic; }
+          h1 { margin: 14px 0 12px; text-align: center; font-size: 18px; text-transform: uppercase; }
+          h2 { display: flex; gap: 44px; margin: 16px 0 12px; font-size: 18px; text-transform: uppercase; }
+          .line { display: flex; gap: 6px; margin: 10px 0; align-items: baseline; }
+          .line span:first-child { flex: 0 0 auto; }
+          .dots { flex: 1; min-height: 22px; border-bottom: 1px dotted #111827; white-space: pre-wrap; }
+          .indent { padding-left: 28px; }
+          .block-label { margin-top: 10px; }
+          .dotted-block {
+            min-height: 226px;
+            padding-top: 2px;
+            line-height: 28px;
+            white-space: pre-wrap;
+            background: repeating-linear-gradient(to bottom, transparent 0, transparent 26px, #6b7280 27px, transparent 28px);
+          }
+          .dotted-block.small { min-height: 142px; }
+          .signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; min-height: 112px; text-align: center; font-weight: 700; }
+          @media print { .document { max-width: none; } }
+        </style>
+      </head>
+      <body>
+        <main class="document">
+          <header class="head">
+            <div>
+              <strong>BV HOÀN MỸ ĐỒNG NAI</strong>
+              <span>Khoa Dinh Dưỡng</span>
+              <div class="dash">--------------------</div>
+              <div class="doc-no"><span>Số</span><b>${escapeHtml(report.soBienBan || '')}</b><span>/BB-DD</span></div>
+            </div>
+            <div>
+              <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong>
+              <span>Độc lập - Tự Do - Hạnh Phúc</span>
+              <div class="dash">--------------------</div>
+              <div class="date">Đồng Nai, ngày ${date.day} tháng ${date.month} năm ${date.year}</div>
+            </div>
+          </header>
+
+          <h1>BIÊN BẢN GHI NHẬN SỰ VIỆC</h1>
+
+          <h2><span>I.</span><span>HÀNH CHÍNH</span></h2>
+          <div class="line"><span>Thời gian:</span><span class="dots">${escapeHtml(thoiGian)}</span></div>
+          <div class="line"><span>Địa điểm:</span><span class="dots">${escapeHtml(diaDiem)}</span></div>
+          <div class="block-label">Thành phần:</div>
+          <div class="line indent"><span>- Đại diện đơn vị cung cấp:</span><span class="dots">${escapeHtml(daiDien)}</span></div>
+          <div class="line indent"><span>- Thành viên kiểm tra VSATTP:</span><span class="dots">${escapeHtml(thanhVien)}</span></div>
+
+          <h2><span>II.</span><span>NỘI DUNG</span></h2>
+          <div class="block-label">Nội dung vi phạm:</div>
+          <div class="dotted-block">${escapeHtml(noiDung)}</div>
+          <div class="block-label">Xác định nguyên nhân:</div>
+          <div class="dotted-block small">${escapeHtml(nguyenNhan)}</div>
+          <div class="block-label">Biện pháp khắc phục, phòng ngừa:</div>
+          <div class="dotted-block small">${escapeHtml(bienPhap)}</div>
+
+          <section class="signatures">
+            <div>Đại diện<br />đơn vị cung cấp</div>
+            <div>Người kiểm tra</div>
+            <div>Lãnh đạo<br />Khoa Dinh Dưỡng</div>
+          </section>
+        </main>
+        <script>window.onload = () => { window.print() }<\/script>
+      </body>
+    </html>
+  `)
+}
+
+const exportNutritionChecklistPaper = async (report, exportedAt) => {
+  const date = getDateParts(report.ngayKiemTra)
+  const details = report.chiTiets || []
+  const checklist = details.filter(item => Number(item.mucSo) <= 8)
+  const uuDiem = getDetailValue(report, 'Các nội dung ưu điểm')
+  const tonTai = getDetailValue(report, 'Các mặt còn tồn tại')
+  const participants = report.thanhPhans || []
+  const participantRows = Array.from({ length: Math.max(4, participants.length || 4) }, (_, index) => {
+    const participant = participants[index] || {}
+    return `
+      <div class="participant-line">
+        <span>(${index + 1})</span>
+        <b>${escapeHtml(participant.hoTen || '')}</b>
+        <span>Chức vụ</span>
+        <b>${escapeHtml(participant.chucVu || '')}</b>
+      </div>
+    `
+  }).join('')
+  const checklistRows = checklist.map(item => `
+    <tr>
+      <td class="center">${escapeHtml(item.mucSo)}</td>
+      <td>${escapeHtml(item.noiDung)}</td>
+      <td class="center">${item.dat === true ? '✓' : ''}</td>
+      <td class="center">${item.dat === false ? '✓' : ''}</td>
+      <td>${escapeHtml(item.ghiChu || '')}</td>
+    </tr>
+  `).join('')
+
+  await writePrintDocument(report, exportedAt, `
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(report.soBienBan || 'Bang-kiem-dinh-duong')}</title>
+        <style>
+          @page { size: A4; margin: 14mm 18mm; }
+          * { box-sizing: border-box; }
+          body { margin: 0; font-family: "Times New Roman", Times, serif; color: #111827; background: #ffffff; font-size: 15px; }
+          .document { max-width: 780px; margin: 0 auto; }
+          .head { display: grid; grid-template-columns: 1fr 1.25fr; gap: 34px; align-items: start; text-align: center; }
+          .brand strong { display: block; color: #6b7280; }
+          .brand span { display: inline-block; margin-top: 6px; border-bottom: 1px solid #111827; font-weight: 700; text-transform: uppercase; }
+          .national strong { display: block; text-transform: uppercase; }
+          .national span { display: block; margin-top: 5px; font-weight: 700; }
+          .date { margin-top: 22px; font-style: italic; }
+          h1 { margin: 24px 0 14px; text-align: center; font-size: 18px; text-transform: uppercase; }
+          h2 { margin: 14px 0 8px; font-size: 16px; }
+          .participant-group { margin-left: 34px; line-height: 1.7; }
+          .participant-line { display: grid; grid-template-columns: 34px 1fr auto 1fr; gap: 8px; align-items: baseline; margin: 4px 0; }
+          .participant-line b { min-height: 22px; border-bottom: 1px dotted #111827; font-weight: 400; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 8px; }
+          th, td { border: 1px solid #4b5563; padding: 7px 8px; vertical-align: top; line-height: 1.35; }
+          th { text-align: center; font-weight: 700; }
+          th:nth-child(1), td:nth-child(1) { width: 54px; }
+          th:nth-child(3), th:nth-child(4), td:nth-child(3), td:nth-child(4) { width: 78px; }
+          th:nth-child(5), td:nth-child(5) { width: 190px; }
+          .center { text-align: center; }
+          .dotted-block {
+            min-height: 84px;
+            line-height: 27px;
+            white-space: pre-wrap;
+            background: repeating-linear-gradient(to bottom, transparent 0, transparent 25px, #6b7280 26px, transparent 27px);
+          }
+          .signatures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 80px; margin-top: 40px; min-height: 104px; font-weight: 700; }
+          @media print { .document { max-width: none; } }
+        </style>
+      </head>
+      <body>
+        <main class="document">
+          <header class="head">
+            <div class="brand">
+              <strong>Bệnh Viện Hoàn Mỹ Đồng Nai</strong>
+              <span>Khoa Dinh Dưỡng</span>
+            </div>
+            <div class="national">
+              <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong>
+              <span>Độc lập - Tự do - Hạnh phúc</span>
+              <div class="date">Đồng Nai, ngày ${date.day} tháng ${date.month} năm ${date.year}</div>
+            </div>
+          </header>
+
+          <h1>BẢNG KIỂM DINH DƯỠNG</h1>
+
+          <h2>I. Thành phần tham gia buổi làm việc (Đoàn kiểm tra)</h2>
+          <div class="participant-group">
+            <div>1. Đại diện khoa dinh dưỡng</div>
+            ${participantRows}
+          </div>
+
+          <h2>II. Nội dung và kết quả kiểm tra</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Nội dung đánh giá</th>
+                <th>Có</th>
+                <th>Không</th>
+                <th>Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>${checklistRows}</tbody>
+          </table>
+
+          <h2>III. Kết luận, kiến nghị và xử lý</h2>
+          <div>3.1. Các nội dung ưu điểm:</div>
+          <div class="dotted-block">${escapeHtml(uuDiem)}</div>
+          <div>3.2. Các mặt còn tồn tại:</div>
+          <div class="dotted-block">${escapeHtml(tonTai)}</div>
+
+          <section class="signatures">
+            <div>Đại diện khoa/phòng</div>
+            <div>Khoa Dinh dưỡng</div>
+          </section>
+        </main>
+        <script>window.onload = () => { window.print() }<\/script>
+      </body>
+    </html>
+  `)
+}
+
 const exportPdf = () => {
   if (!activeReport.value) {
     return
@@ -992,6 +1246,17 @@ const exportPdfAdvanced = async () => {
   const details = report.chiTiets || []
   const approvedAt = report.approvedAt || (report.status === 'approved' ? report.updatedAt : '')
   const exportedAt = new Date().toISOString()
+
+  if (report.loaiBienBan === 'GhiNhanSuViec') {
+    await exportIncidentPaper(report, exportedAt)
+    return
+  }
+
+  if (report.loaiBienBan === 'BangKiemDinhDuong') {
+    await exportNutritionChecklistPaper(report, exportedAt)
+    return
+  }
+
   const isMeal = report.loaiBienBan === 'SuatAnNguoiBenh'
   let currentGroup = ''
   const rows = isMeal

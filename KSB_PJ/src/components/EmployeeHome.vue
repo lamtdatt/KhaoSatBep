@@ -30,6 +30,16 @@ const reportTypes = [
     type: 'SuatAnNguoiBenh',
     label: 'Suất ăn người bệnh',
     color: 'linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%)'
+  },
+  {
+    type: 'GhiNhanSuViec',
+    label: 'Ghi nhận sự việc',
+    color: 'linear-gradient(180deg, #e11d48 0%, #fb7185 100%)'
+  },
+  {
+    type: 'BangKiemDinhDuong',
+    label: 'Bảng kiểm dinh dưỡng',
+    color: 'linear-gradient(180deg, #22c55e 0%, #86efac 100%)'
   }
 ]
 
@@ -144,6 +154,20 @@ const moduleCards = [
     route: '/employee/bb-suatan',
     icon: 'restaurant-outline',
     description: 'Kiểm soát chia suất, vận chuyển, giao nhận và phản hồi của khoa điều trị.',
+    status: 'Sẵn sàng nhập liệu'
+  },
+  {
+    title: 'Ghi nhận sự việc',
+    route: '/employee/bb-ghinhan',
+    icon: 'create-outline',
+    description: 'Lập biên bản hành chính, ghi nội dung vi phạm, nguyên nhân và biện pháp khắc phục theo mẫu giấy.',
+    status: 'Sẵn sàng nhập liệu'
+  },
+  {
+    title: 'Bảng kiểm dinh dưỡng',
+    route: '/employee/bb-dinhduong',
+    icon: 'clipboard-outline',
+    description: 'Kiểm tra hồ sơ bệnh án, BMI, mã chế độ ăn, hướng dẫn dinh dưỡng và ý kiến về suất ăn.',
     status: 'Sẵn sàng nhập liệu'
   }
 ]

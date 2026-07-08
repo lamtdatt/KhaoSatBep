@@ -175,9 +175,9 @@ namespace KhaoSatBep.API.Controllers
             var userId = GetUserId();
 
             // Validate loại biên bản
-            var loaiHopLe = new[] { "CSHT", "HoSo", "VeSinh", "SuatAn" };
+            var loaiHopLe = new[] { "CSHT", "HoSo", "VeSinh", "SuatAn", "GhiNhanSuViec", "BangKiemDinhDuong" };
             if (!loaiHopLe.Contains(dto.LoaiBienBan))
-                return BadRequest(new { message = "Loại biên bản không hợp lệ. Chấp nhận: CSHT, HoSo, VeSinh, SuatAn" });
+                return BadRequest(new { message = "Loại biên bản không hợp lệ. Chấp nhận: CSHT, HoSo, VeSinh, SuatAn, GhiNhanSuViec, BangKiemDinhDuong" });
 
             var bienBan = new BienBan
             {

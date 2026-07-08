@@ -201,7 +201,9 @@ namespace KhaoSatBep.API.Controllers
                 { "CSHT", "Cơ sở hạ tầng" },
                 { "HoSo", "Hồ sơ sổ sách" },
                 { "VeSinh", "Vệ sinh ATTP" },
-                { "SuatAn", "Suất ăn người bệnh" }
+                { "SuatAn", "Suất ăn người bệnh" },
+                { "GhiNhanSuViec", "Ghi nhận sự việc" },
+                { "BangKiemDinhDuong", "Bảng kiểm dinh dưỡng" }
             };
 
             var result = data

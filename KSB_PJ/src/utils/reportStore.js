@@ -11,14 +11,18 @@ const FRONTEND_REPORT_TYPES = {
   CSHT: 'CoSoHaTang',
   HoSo: 'HoSo',
   VeSinh: 'VeSinh',
-  SuatAn: 'SuatAnNguoiBenh'
+  SuatAn: 'SuatAnNguoiBenh',
+  GhiNhanSuViec: 'GhiNhanSuViec',
+  BangKiemDinhDuong: 'BangKiemDinhDuong'
 }
 
 const BACKEND_REPORT_TYPES = {
   CoSoHaTang: 'CSHT',
   HoSo: 'HoSo',
   VeSinh: 'VeSinh',
-  SuatAnNguoiBenh: 'SuatAn'
+  SuatAnNguoiBenh: 'SuatAn',
+  GhiNhanSuViec: 'GhiNhanSuViec',
+  BangKiemDinhDuong: 'BangKiemDinhDuong'
 }
 
 const STATUS_MAP = {

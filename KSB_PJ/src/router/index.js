@@ -8,6 +8,8 @@ const FormCoSoHaTang = () => import('../components/forms/FormCoSoHaTang.vue')
 const FormHoSo = () => import('../components/forms/FormHoSo.vue')
 const FormVeSinhATTP = () => import('../components/forms/FormVeSinhATTP.vue')
 const FormSuatAnNguoiBenh = () => import('../components/forms/FormSuatAnNguoiBenh.vue')
+const FormGhiNhanSuViec = () => import('../components/forms/FormGhiNhanSuViec.vue')
+const FormBangKiemDinhDuong = () => import('../components/forms/FormBangKiemDinhDuong.vue')
 const SignaturePadPage = () => import('../components/SignaturePadPage.vue')
 
 const routes = [
@@ -48,6 +50,16 @@ const routes = [
         path: 'bb-suatan',
         name: 'BBSuatAn',
         component: FormSuatAnNguoiBenh
+      },
+      {
+        path: 'bb-ghinhan',
+        name: 'BBGhiNhanSuViec',
+        component: FormGhiNhanSuViec
+      },
+      {
+        path: 'bb-dinhduong',
+        name: 'BBBangKiemDinhDuong',
+        component: FormBangKiemDinhDuong
       },
       {
         path: 'chu-ky',
