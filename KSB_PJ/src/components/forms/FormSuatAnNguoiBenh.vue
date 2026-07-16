@@ -592,17 +592,28 @@ onUnmounted(() => {
       </div>
     </form>
 
-    <!-- Sticky Progress Bar -->
+    <!-- Sticky Progress Bar (Floating Vertical Gauge on Desktop, Horizontal Pill on Mobile) -->
     <div class="sticky-progress-bar">
       <div class="progress-info">
-        <span>Tiến độ: <strong>{{ completedCount }}/{{ totalCount }}</strong> tiêu chí ({{ progressPercent }}%)</span>
-        <button v-if="completedCount < totalCount" type="button" class="btn-goto-missing" @click="scrollToFirstUnchecked">
-          Tìm mục chưa tích <ion-icon name="arrow-down-outline"></ion-icon>
+        <div class="progress-percent-circle">
+          <span>{{ progressPercent }}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" :style="{ '--progress-val': progressPercent + '%' }"></div>
+        </div>
+        <div class="progress-text-fraction">
+          <strong>{{ completedCount }}/{{ totalCount }}</strong>
+          <span>tiêu chí</span>
+        </div>
+        <button v-if="completedCount < totalCount" type="button" class="btn-goto-missing" title="Tìm mục chưa tích" @click="scrollToFirstUnchecked">
+          <ion-icon name="search-outline"></ion-icon>
+          <span class="btn-text">Tìm mục chưa tích</span>
+          <span class="btn-tooltip">Tìm mục chưa tích</span>
         </button>
-        <span v-else class="progress-success"><ion-icon name="checkmark-circle-outline"></ion-icon> Đã hoàn thành</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+        <div v-else class="progress-success-icon" title="Đã hoàn thành">
+          <ion-icon name="checkmark-circle"></ion-icon>
+          <span class="btn-text">Đã hoàn thành</span>
+        </div>
       </div>
     </div>
   </div>
@@ -659,76 +670,80 @@ onUnmounted(() => {
 .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
 .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-/* Sticky Progress Bar */
+
+/* Floating Vertical Progress Bar on Desktop */
 .sticky-progress-bar {
-  position: sticky;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #cbd5e1;
-  border-bottom: none;
-  padding: 14px 24px;
-  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.08);
-  z-index: 99;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 30px;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
+  position: fixed; right: 32px; top: 50%; transform: translateY(-50%); width: 72px;
+  background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(148,163,184,0.35); padding: 20px 10px;
+  box-shadow: 0 12px 40px rgba(15,23,42,0.12); z-index: 999; border-radius: 40px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
 }
-
-.progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.95rem;
-  color: #334155;
+.sticky-progress-bar:hover { transform: translateY(-52%) scale(1.03); box-shadow: 0 16px 45px rgba(15,23,42,0.18); }
+.progress-info { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+.progress-percent-circle {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg,#f0fdf4,#e0f2fe); border: 1px solid rgba(56,189,248,0.2);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(15,23,42,0.04);
 }
-
-.btn-goto-missing {
-  background: #eff6ff;
-  color: #0284c7;
-  border: 1px solid #bae6fd;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-goto-missing:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-}
-
-.progress-success {
-  color: #16a34a;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.9rem;
-}
-
+.progress-percent-circle span { font-size: 0.95rem; font-weight: 800; color: #0369a1; }
 .progress-track {
-  width: 100%;
-  height: 8px;
-  background: #e2e8f0;
-  border-radius: 999px;
-  overflow: hidden;
+  width: 8px; height: 120px; background: #f1f5f9; border-radius: 999px;
+  overflow: hidden; position: relative; display: flex; align-items: flex-end;
 }
-
 .progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #38bdf8, #10b981);
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 999px;
+  width: 100%; height: var(--progress-val);
+  background: linear-gradient(180deg,#22c55e,#38bdf8); border-radius: 999px;
+  transition: height 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.progress-text-fraction { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.progress-text-fraction strong { font-size: 0.95rem; color: #0f172a; font-weight: 800; }
+.progress-text-fraction span { font-size: 0.72rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.btn-goto-missing {
+  width: 44px; height: 44px; border-radius: 50%; background: #eff6ff; color: #0284c7;
+  border: 1px solid #bae6fd; display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; cursor: pointer; position: relative; transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(2,132,199,0.15);
+}
+.btn-goto-missing:hover { background: #0284c7; color: #fff; border-color: #0284c7; transform: scale(1.05); }
+.btn-goto-missing .btn-tooltip {
+  position: absolute; right: 60px; top: 50%; transform: translateY(-50%);
+  background: #0f172a; color: #fff; padding: 6px 12px; border-radius: 8px;
+  font-size: 0.8rem; font-weight: 600; white-space: nowrap; opacity: 0;
+  pointer-events: none; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.btn-goto-missing .btn-tooltip::after {
+  content: ''; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+  border-width: 5px; border-style: solid; border-color: transparent transparent transparent #0f172a;
+}
+.btn-goto-missing:hover .btn-tooltip { opacity: 1; right: 54px; }
+.progress-success-icon {
+  width: 44px; height: 44px; border-radius: 50%; background: #f0fdf4; color: #16a34a;
+  border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; box-shadow: 0 4px 12px rgba(22,163,74,0.15);
+}
+.btn-goto-missing .btn-text, .progress-success-icon .btn-text { display: none; }
+
+@media (max-width: 960px) {
+  .sticky-progress-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; top: auto; width: 100%; transform: none;
+    border-radius: 16px 16px 0 0; border: none; border-top: 1px solid #e2e8f0;
+    padding: 12px 20px; box-shadow: 0 -5px 25px rgba(0,0,0,0.08);
+    flex-direction: row; justify-content: space-between; height: auto; gap: 0;
+  }
+  .sticky-progress-bar:hover { transform: none; }
+  .progress-info { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; width: auto; }
+  .progress-percent-circle { width: 38px; height: 38px; flex-shrink: 0; }
+  .progress-percent-circle span { font-size: 0.8rem; }
+  .progress-track { display: none; }
+  .progress-text-fraction { flex-direction: row; align-items: center; gap: 4px; }
+  .progress-text-fraction strong { font-size: 0.9rem; }
+  .progress-text-fraction span { font-size: 0.8rem; }
+  .btn-goto-missing, .progress-success-icon { width: auto; height: auto; border-radius: 10px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; box-shadow: none; }
+  .btn-goto-missing ion-icon, .progress-success-icon ion-icon { font-size: 1.1rem; }
+  .btn-goto-missing .btn-tooltip { display: none; }
+  .btn-goto-missing .btn-text, .progress-success-icon .btn-text { display: inline; font-size: 0.85rem; margin-left: 6px; }
 }
 
 /* Flash Highlight Animation for incomplete item row */

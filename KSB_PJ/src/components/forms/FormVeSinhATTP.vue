@@ -202,7 +202,10 @@ const totalCount = computed(() => {
 })
 const progressPercent = computed(() => Math.round((completedCount.value / totalCount.value) * 100))
 
+const highlightUnchecked = ref(false)
+
 const scrollToFirstUnchecked = async () => {
+  highlightUnchecked.value = true
   let foundSectionIndex = -1
   let foundItem = null
 
@@ -225,8 +228,6 @@ const scrollToFirstUnchecked = async () => {
     const el = document.getElementById(`item-row-${foundItem.mucSo}`)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      el.classList.add('flash-highlight')
-      setTimeout(() => el.classList.remove('flash-highlight'), 1800)
     }
   }
 }
@@ -356,204 +357,466 @@ onUnmounted(() => {
       <p class="subtitle">Tại bộ phận chế biến & cung cấp suất ăn</p>
     </div>
 
-    <form @submit.prevent="submitForm">
-      <div class="glass-card section-card">
-        <h3>Thông tin chung</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Ngày kiểm tra</label>
-            <input v-model="form.ngayKiemTra" type="date" required class="glass-input" />
+    <div class="form-content-wrapper">
+      <form @submit.prevent="submitForm">
+        <div class="glass-card section-card">
+          <h3>Thông tin chung</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ngày kiểm tra</label>
+              <input v-model="form.ngayKiemTra" type="date" required class="glass-input" />
+            </div>
+          </div>
+
+          <div class="thanh-phan-list">
+            <div class="section-topline">
+              <h4>Thành phần</h4>
+              <button type="button" class="btn-outline" @click="addThanhPhan">+ Thêm người</button>
+            </div>
+
+            <div v-for="(tp, index) in form.thanhPhans" :key="`${tp.stt}-${index}`" class="thanh-phan-item">
+              <div class="stt-badge">{{ tp.stt }}</div>
+              <input v-model="tp.hoTen" type="text" placeholder="Họ và tên" class="glass-input flex-1" required />
+              <input v-model="tp.chucVu" type="text" placeholder="Chức vụ" class="glass-input flex-1" required />
+              <button v-if="form.thanhPhans.length > 1" type="button" class="btn-icon text-red" @click="removeThanhPhan(index)">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="thanh-phan-list">
-          <div class="section-topline">
-            <h4>Thành phần</h4>
-            <button type="button" class="btn-outline" @click="addThanhPhan">+ Thêm người</button>
+        <div class="glass-card section-card">
+          <div class="content-header">
+            <div>
+              <h3>Nội dung kiểm tra</h3>
+              <p>{{ totalItems }} tiêu chí, chia theo {{ sections.length }} phần.</p>
+            </div>
+            <div class="pager-counter">Phần {{ activeSectionIndex + 1 }}/{{ sections.length }}</div>
           </div>
 
-          <div v-for="(tp, index) in form.thanhPhans" :key="`${tp.stt}-${index}`" class="thanh-phan-item">
-            <div class="stt-badge">{{ tp.stt }}</div>
-            <input v-model="tp.hoTen" type="text" placeholder="Họ và tên" class="glass-input flex-1" required />
-            <input v-model="tp.chucVu" type="text" placeholder="Chức vụ" class="glass-input flex-1" required />
-            <button v-if="form.thanhPhans.length > 1" type="button" class="btn-icon text-red" @click="removeThanhPhan(index)">
-              <ion-icon name="trash-outline"></ion-icon>
+          <div class="section-tabs">
+            <button
+              v-for="(section, index) in sections"
+              :key="section.id"
+              type="button"
+              class="section-tab"
+              :class="{ active: index === activeSectionIndex }"
+              @click="activeSectionIndex = index"
+            >
+              <span>{{ section.id }}</span>
+              <strong>{{ section.title }}</strong>
             </button>
           </div>
-        </div>
-      </div>
 
-      <div class="glass-card section-card">
-        <div class="content-header">
-          <div>
-            <h3>Nội dung kiểm tra</h3>
-            <p>{{ totalItems }} tiêu chí, chia theo {{ sections.length }} phần.</p>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>TT</th>
+                  <th>Nội dung kiểm tra</th>
+                  <th>Đạt</th>
+                  <th>Không đạt</th>
+                  <th>Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in activeSection.items" :key="row.mucSo" :id="'item-row-' + row.mucSo" :class="{ 'row-missing-highlight': highlightUnchecked && row.dat === null }">
+                  <td class="text-center">{{ row.mucSo }}</td>
+                  <td>
+                    <div class="criteria-text">{{ row.noiDung }}</div>
+                  </td>
+                  <td class="text-center"><input v-model="row.dat" type="radio" :name="`vsattp_${row.mucSo}`" :value="true" /></td>
+                  <td class="text-center"><input v-model="row.dat" type="radio" :name="`vsattp_${row.mucSo}`" :value="false" /></td>
+                  <td>
+                    <textarea v-model="row.ghiChu" rows="2" placeholder="Nhập ghi chú..." class="glass-input-sm note-input" @focus="scrollFocusedFieldIntoView"></textarea>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div class="pager-counter">Phần {{ activeSectionIndex + 1 }}/{{ sections.length }}</div>
+
+          <div class="section-pager">
+            <button type="button" class="btn-secondary" :disabled="activeSectionIndex === 0" @click="activeSectionIndex -= 1">Phần trước</button>
+            <button type="button" class="btn-secondary" :disabled="activeSectionIndex === sections.length - 1" @click="activeSectionIndex += 1">Phần sau</button>
+          </div>
         </div>
 
-        <div class="section-tabs">
-          <button
-            v-for="(section, index) in sections"
-            :key="section.id"
-            type="button"
-            class="section-tab"
-            :class="{ active: index === activeSectionIndex }"
-            @click="activeSectionIndex = index"
-          >
-            <span>{{ section.id }}</span>
-            <strong>{{ section.title }}</strong>
+        <div class="glass-card section-card">
+          <h3>Góp ý, nhắc nhở của Khoa Dinh dưỡng</h3>
+          <textarea v-model="form.gopYKhoaDinhDuong" rows="4" class="glass-input" @focus="scrollFocusedFieldIntoView"></textarea>
+        </div>
+
+        <div class="glass-card section-card">
+          <h3>Ý kiến của BPCB & CCSA</h3>
+          <textarea v-model="form.yKienBPCB" rows="4" class="glass-input" @focus="scrollFocusedFieldIntoView"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" @click="cancelForm">Hủy</button>
+          <button type="submit" class="btn-primary" :disabled="isSubmitting">
+            <span v-if="!isSubmitting"><ion-icon name="send-outline"></ion-icon> Gửi biên bản lên admin</span>
+            <span v-else class="spinner"></span>
           </button>
         </div>
+      </form>
 
-        <div class="table-responsive">
-          <table class="glass-table">
-            <thead>
-              <tr>
-                <th>TT</th>
-                <th>Nội dung kiểm tra</th>
-                <th>Đạt</th>
-                <th>Không đạt</th>
-                <th>Ghi chú</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in activeSection.items" :key="row.mucSo" :id="'item-row-' + row.mucSo">
-                <td class="text-center">{{ row.mucSo }}</td>
-                <td>
-                  <div class="criteria-text">{{ row.noiDung }}</div>
-                </td>
-                <td class="text-center"><input v-model="row.dat" type="radio" :name="`vsattp_${row.mucSo}`" :value="true" /></td>
-                <td class="text-center"><input v-model="row.dat" type="radio" :name="`vsattp_${row.mucSo}`" :value="false" /></td>
-                <td>
-                  <textarea v-model="row.ghiChu" rows="2" placeholder="Nhập ghi chú..." class="glass-input-sm note-input" @focus="scrollFocusedFieldIntoView"></textarea>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- Sticky Progress Bar (Floating Vertical Gauge on Desktop, Horizontal Pill on Mobile) -->
+      <div class="sticky-progress-bar">
+        <div class="progress-info">
+          <!-- Percentage Badge -->
+          <div class="progress-percent-circle">
+            <span>{{ progressPercent }}%</span>
+          </div>
+          
+          <!-- Vertical/Horizontal Track -->
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ '--progress-val': progressPercent + '%' }"></div>
+          </div>
+          
+          <!-- Text/Fraction -->
+          <div class="progress-text-fraction">
+            <strong>{{ completedCount }}/{{ totalCount }}</strong>
+            <span>tiêu chí</span>
+          </div>
+          
+          <!-- Action Button -->
+          <button v-if="completedCount < totalCount" type="button" class="btn-goto-missing" title="Tìm mục chưa tích" @click="scrollToFirstUnchecked">
+            <ion-icon name="search-outline"></ion-icon>
+            <span class="btn-text">Tìm mục chưa tích</span>
+            <span class="btn-tooltip">Tìm mục chưa tích</span>
+          </button>
+          <div v-else class="progress-success-icon" title="Đã hoàn thành">
+            <ion-icon name="checkmark-circle"></ion-icon>
+            <span class="btn-text">Đã hoàn thành</span>
+          </div>
         </div>
-
-        <div class="section-pager">
-          <button type="button" class="btn-secondary" :disabled="activeSectionIndex === 0" @click="activeSectionIndex -= 1">Phần trước</button>
-          <button type="button" class="btn-secondary" :disabled="activeSectionIndex === sections.length - 1" @click="activeSectionIndex += 1">Phần sau</button>
-        </div>
-      </div>
-
-      <div class="glass-card section-card">
-        <h3>Góp ý, nhắc nhở của Khoa Dinh dưỡng</h3>
-        <textarea v-model="form.gopYKhoaDinhDuong" rows="4" class="glass-input" @focus="scrollFocusedFieldIntoView"></textarea>
-      </div>
-
-      <div class="glass-card section-card">
-        <h3>Ý kiến của BPCB & CCSA</h3>
-        <textarea v-model="form.yKienBPCB" rows="4" class="glass-input" @focus="scrollFocusedFieldIntoView"></textarea>
-      </div>
-
-      <div class="form-actions">
-        <button type="button" class="btn-secondary" @click="cancelForm">Hủy</button>
-        <button type="submit" class="btn-primary" :disabled="isSubmitting">
-          <span v-if="!isSubmitting"><ion-icon name="send-outline"></ion-icon> Gửi biên bản lên admin</span>
-          <span v-else class="spinner"></span>
-        </button>
-      </div>
-    </form>
-
-    <!-- Sticky Progress Bar -->
-    <div class="sticky-progress-bar">
-      <div class="progress-info">
-        <span>Tiến độ: <strong>{{ completedCount }}/{{ totalCount }}</strong> tiêu chí ({{ progressPercent }}%)</span>
-        <button v-if="completedCount < totalCount" type="button" class="btn-goto-missing" @click="scrollToFirstUnchecked">
-          Tìm mục chưa tích <ion-icon name="arrow-down-outline"></ion-icon>
-        </button>
-        <span v-else class="progress-success"><ion-icon name="checkmark-circle-outline"></ion-icon> Đã hoàn thành</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-<style scoped>
 .form-container { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; padding-bottom: 120px !important; }
 .form-container form { display: flex; flex-direction: column; gap: 20px; }
 
-/* Sticky Progress Bar */
-.sticky-progress-bar {
-  position: sticky;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #cbd5e1;
-  border-bottom: none;
-  padding: 14px 24px;
-  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.08);
-  z-index: 99;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 30px;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
+/* Wrapper for form content side-by-side with sticky progress bar on desktop */
+@media (min-width: 961px) {
+  .form-content-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+    position: relative;
+    width: 100%;
+  }
+  .form-content-wrapper > form {
+    flex: 1;
+    min-width: 0;
+  }
+  .sticky-progress-bar {
+    position: sticky !important;
+    top: 24px;
+    right: 0;
+    transform: none !important;
+    width: 72px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 20px 10px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+    z-index: 90;
+    border-radius: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+  }
+  .sticky-progress-bar:hover {
+    transform: scale(1.03) !important;
+    box-shadow: 0 16px 45px rgba(15, 23, 42, 0.18);
+  }
+}
+
+@media (max-width: 960px) {
+  .form-content-wrapper {
+    display: block;
+    width: 100%;
+  }
+  .sticky-progress-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    transform: none;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.08);
+    flex-direction: row;
+    justify-content: space-between;
+    height: auto;
+    gap: 0;
+    z-index: 999;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+  }
 }
 
 .progress-info {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.progress-percent-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f0fdf4, #e0f2fe);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.progress-percent-circle span {
   font-size: 0.95rem;
-  color: #334155;
-}
-
-.btn-goto-missing {
-  background: #eff6ff;
-  color: #0284c7;
-  border: 1px solid #bae6fd;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-goto-missing:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-}
-
-.progress-success {
-  color: #16a34a;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0369a1;
 }
 
 .progress-track {
-  width: 100%;
-  height: 8px;
-  background: #e2e8f0;
+  width: 8px;
+  height: 120px;
+  background: #f1f5f9;
   border-radius: 999px;
   overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
 }
 
 .progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #38bdf8, #10b981);
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  height: var(--progress-val);
+  background: linear-gradient(180deg, #22c55e, #38bdf8);
   border-radius: 999px;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-text-fraction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.progress-text-fraction strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.progress-text-fraction span {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-goto-missing {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+}
+
+.btn-goto-missing:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  transform: scale(1.05);
+}
+
+.btn-goto-missing .btn-tooltip {
+  position: absolute;
+  right: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #0f172a;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-goto-missing .btn-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent #0f172a;
+}
+
+.btn-goto-missing:hover .btn-tooltip {
+  opacity: 1;
+  right: 54px;
+}
+
+.progress-success-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.btn-goto-missing .btn-text,
+.progress-success-icon .btn-text {
+  display: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 960px) {
+  .sticky-progress-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    transform: none;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.08);
+    flex-direction: row;
+    justify-content: space-between;
+    height: auto;
+    gap: 0;
+  }
+  
+  .sticky-progress-bar:hover {
+    transform: none;
+  }
+  
+  .progress-info {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: auto;
+  }
+  
+  .progress-percent-circle {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  
+  .progress-percent-circle span {
+    font-size: 0.8rem;
+  }
+  
+  .progress-track {
+    display: none;
+  }
+  
+  .progress-text-fraction {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .progress-text-fraction strong {
+    font-size: 0.9rem;
+  }
+  
+  .progress-text-fraction span {
+    font-size: 0.8rem;
+  }
+  
+  .btn-goto-missing, .progress-success-icon {
+    width: auto;
+    height: auto;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: none;
+  }
+  
+  .btn-goto-missing ion-icon, .progress-success-icon ion-icon {
+    font-size: 1.1rem;
+  }
+  
+  .btn-goto-missing .btn-tooltip {
+    display: none;
+  }
+  
+  .btn-goto-missing .btn-text,
+  .progress-success-icon .btn-text {
+    display: inline;
+    font-size: 0.85rem;
+    margin-left: 6px;
+  }
 }
 
 /* Flash Highlight Animation for incomplete item row */
 :global(tr.flash-highlight) {
   animation: rowFlash 1.6s ease-in-out infinite;
+}
+
+:global(tr.row-missing-highlight td) {
+  background-color: #fee2e2 !important;
+  border-top: 1.5px solid #f87171 !important;
+  border-bottom: 1.5px solid #f87171 !important;
+}
+:global(tr.row-missing-highlight td:first-child) {
+  border-left: 3px solid #ef4444 !important;
+}
+:global(tr.row-missing-highlight td:last-child) {
+  border-right: 1.5px solid #f87171 !important;
 }
 
 @keyframes rowFlash {
