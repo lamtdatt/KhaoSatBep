@@ -267,22 +267,20 @@ onUnmounted(() => {
 
 /* Sticky Progress Bar */
 .sticky-progress-bar {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid #cbd5e1;
-  padding: 12px 24px;
-  box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.06);
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  padding: 14px 24px;
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.08);
   z-index: 99;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 1200px;
-  margin: 0 auto;
+  margin-top: 30px;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
 }
