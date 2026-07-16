@@ -1843,7 +1843,7 @@ watch(activeSection, async section => {
             </label>
 
             <button type="button" class="btn primary filter-apply" @click="applyReportDateFilter">
-              Lá»c
+              Lọc
             </button>
 
             <button type="button" class="btn secondary filter-reset" @click="resetReportFilters">
@@ -3417,8 +3417,8 @@ watch(activeSection, async section => {
 
 .review-queue-groups {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .review-queue-group {
@@ -3469,8 +3469,8 @@ watch(activeSection, async section => {
 
 .report-columns {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .report-column {
@@ -4365,12 +4365,21 @@ watch(activeSection, async section => {
 }
 
 .btn {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 42px;
-  padding: 10px 14px;
+  padding: 10px 18px;
   border: 1px solid transparent;
   border-radius: 9px;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .btn.primary {
@@ -4378,9 +4387,13 @@ watch(activeSection, async section => {
   color: #ffffff;
 }
 
+.btn.primary:hover {
+  background: #0284c7;
+}
+
 .template-admin-actions .btn.primary,
 .action-row .btn.primary {
-  font-family: "Times New Roman", Times, serif;
+  font-family: inherit;
 }
 
 .btn.secondary {
@@ -4389,9 +4402,18 @@ watch(activeSection, async section => {
   border-color: #cbd5e1;
 }
 
+.btn.secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
 .btn.approve {
   background: #16a34a;
   color: #ffffff;
+}
+
+.btn.approve:hover {
+  background: #15803d;
 }
 
 .signature-panel {

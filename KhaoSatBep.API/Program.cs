@@ -19,9 +19,22 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // ============================
 // 1. DATABASE (Supabase PostgreSQL)
 // ============================
-builder.Services.AddDbContext<AppDbContext>(options =>
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(connectionString))
+{
+    if (!connectionString.Contains("Minimum Pool Size"))
+    {
+        connectionString += ";Minimum Pool Size=2;Keepalive=30";
+    }
+    else
+    {
+        connectionString = connectionString.Replace("Minimum Pool Size=0", "Minimum Pool Size=2");
+    }
+}
+
+builder.Services.AddDbContextPool<AppDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()));
 
 // ============================
@@ -150,18 +163,50 @@ app.UseAuthorization();
 // Route test để biết API sống hay chưa
 app.MapGet("/", () => "KhaoSatBep API is running");
 
+// Health check endpoint nhẹ cho warm-up từ frontend (có làm nóng DB & EF Core)
+app.MapGet("/health", async (AppDbContext db) => {
+    try
+    {
+        _ = await db.Users.AnyAsync();
+        return Results.Ok(new { status = "ok", database = true, time = DateTime.UtcNow });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { status = "error", message = ex.Message }, statusCode: 500);
+    }
+});
+
 app.MapControllers();
 
 // ============================
-// 8. AUTO MIGRATE DATABASE
+// 8. AUTO MIGRATE & WARM UP DATABASE
 // ============================
 var applyMigrationsOnStartup = app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup");
 
-if (applyMigrationsOnStartup)
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    if (applyMigrationsOnStartup)
+    {
+        db.Database.Migrate();
+    }
 }
+
+// Chạy background warm up để làm nóng EF Core và Connection Pool ngay khi app vừa start
+_ = Task.Run(async () =>
+{
+    try
+    {
+        using var warmupScope = app.Services.CreateScope();
+        var db = warmupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.CanConnectAsync();
+        _ = await db.Users.AnyAsync();
+        Console.WriteLine("[Warmup] EF Core and database connection warmed up successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Warmup] Failed to warm up database: {ex.Message}");
+    }
+});
 
 app.Run();

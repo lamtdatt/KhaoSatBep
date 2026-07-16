@@ -26,6 +26,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      '/health': {
+        target: 'https://khaosatbep-api.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 })

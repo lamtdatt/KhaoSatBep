@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppToast from '@/components/AppToast.vue'
 import { clearFormDraft, loadFormDraft, saveFormDraft, scrollFocusedFieldIntoView } from '@/utils/formDraftStore'
@@ -44,6 +44,22 @@ const toast = ref({ visible: false, message: '' })
 
 let toastTimer = null
 
+const completedCount = computed(() => items.value.filter(item => item.dat !== null).length)
+const totalCount = computed(() => items.value.length)
+const progressPercent = computed(() => Math.round((completedCount.value / totalCount.value) * 100))
+
+const scrollToFirstUnchecked = () => {
+  const uncheckedItem = items.value.find(item => item.dat === null)
+  if (uncheckedItem) {
+    const el = document.getElementById(`item-row-${uncheckedItem.mucSo}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('flash-highlight')
+      setTimeout(() => el.classList.remove('flash-highlight'), 1800)
+    }
+  }
+}
+
 const showToast = message => {
   toast.value = { visible: true, message }
   window.clearTimeout(toastTimer)
@@ -86,6 +102,13 @@ const cancelForm = () => {
 }
 
 const submitForm = async () => {
+  const unchecked = items.value.find(item => item.dat === null)
+  if (unchecked) {
+    showToast(`Vui lòng hoàn thành tiêu chí số ${unchecked.mucSo}!`)
+    scrollToFirstUnchecked()
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -185,7 +208,7 @@ onUnmounted(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in items" :key="item.mucSo">
+              <tr v-for="item in items" :key="item.mucSo" :id="'item-row-' + item.mucSo">
                 <td class="text-center">{{ item.mucSo }}</td>
                 <td>{{ item.noiDung }}</td>
                 <td class="text-center"><input v-model="item.dat" type="radio" :name="`hoso_${item.mucSo}`" :value="true" /></td>
@@ -221,12 +244,115 @@ onUnmounted(() => {
         </button>
       </div>
     </form>
+
+    <!-- Sticky Progress Bar -->
+    <div class="sticky-progress-bar">
+      <div class="progress-info">
+        <span>Tiến độ: <strong>{{ completedCount }}/{{ totalCount }}</strong> tiêu chí ({{ progressPercent }}%)</span>
+        <button v-if="completedCount < totalCount" type="button" class="btn-goto-missing" @click="scrollToFirstUnchecked">
+          Tìm mục chưa tích <ion-icon name="arrow-down-outline"></ion-icon>
+        </button>
+        <span v-else class="progress-success"><ion-icon name="checkmark-circle-outline"></ion-icon> Đã hoàn thành</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.form-container { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; padding-bottom: 50px; }
+.form-container { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; padding-bottom: 120px !important; }
 .form-container form { display: flex; flex-direction: column; gap: 20px; }
+
+/* Sticky Progress Bar */
+.sticky-progress-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid #cbd5e1;
+  padding: 12px 24px;
+  box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.06);
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.btn-goto-missing {
+  background: #eff6ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-goto-missing:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.progress-success {
+  color: #16a34a;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #10b981);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 999px;
+}
+
+/* Flash Highlight Animation for incomplete item row */
+:global(tr.flash-highlight) {
+  animation: rowFlash 1.6s ease-in-out infinite;
+}
+
+@keyframes rowFlash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: #fee2e2;
+    box-shadow: inset 0 0 0 2px #ef4444;
+  }
+}
 .glass-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border-radius: 12px; padding: 24px; color: #334155; }
 .header-card { text-align: center; background: linear-gradient(135deg, #ecfeff, #e0f2fe); border-bottom: 3px solid #0891b2; }
 .header-card h2 { margin: 0 0 10px; font-size: 1.8rem; color: #0f172a; }

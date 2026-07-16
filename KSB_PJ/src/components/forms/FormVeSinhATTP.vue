@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppToast from '@/components/AppToast.vue'
 import { clearFormDraft, loadFormDraft, saveFormDraft, scrollFocusedFieldIntoView } from '@/utils/formDraftStore'
@@ -194,8 +194,42 @@ const activeRows = computed(() => {
   return rows
 })
 const totalItems = computed(() => sections.value.reduce((sum, section) => sum + section.items.length, 0))
-const isSubmitting = ref(false)
-const toast = ref({ visible: false, message: '' })
+const completedCount = computed(() => {
+  return sections.value.reduce((sum, sec) => sum + sec.items.filter(item => item.dat !== null).length, 0)
+})
+const totalCount = computed(() => {
+  return sections.value.reduce((sum, sec) => sum + sec.items.length, 0)
+})
+const progressPercent = computed(() => Math.round((completedCount.value / totalCount.value) * 100))
+
+const scrollToFirstUnchecked = async () => {
+  let foundSectionIndex = -1
+  let foundItem = null
+
+  for (let i = 0; i < sections.value.length; i++) {
+    const item = sections.value[i].items.find(it => it.dat === null)
+    if (item) {
+      foundSectionIndex = i
+      foundItem = item
+      break
+    }
+  }
+
+  if (foundItem !== null && foundSectionIndex !== -1) {
+    if (activeSectionIndex.value !== foundSectionIndex) {
+      activeSectionIndex.value = foundSectionIndex
+    }
+
+    await nextTick()
+
+    const el = document.getElementById(`item-row-${foundItem.mucSo}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('flash-highlight')
+      setTimeout(() => el.classList.remove('flash-highlight'), 1800)
+    }
+  }
+}
 
 let toastTimer = null
 
@@ -242,6 +276,23 @@ const cancelForm = () => {
 }
 
 const submitForm = async () => {
+  let hasUnchecked = false
+  let uncheckedNum = -1
+  for (const sec of sections.value) {
+    const item = sec.items.find(it => it.dat === null)
+    if (item) {
+      hasUnchecked = true
+      uncheckedNum = item.mucSo
+      break
+    }
+  }
+
+  if (hasUnchecked) {
+    showToast(`Vui lòng hoàn thành tiêu chí số ${uncheckedNum}!`)
+    await scrollToFirstUnchecked()
+    return
+  }
+
   isSubmitting.value = true
 
   const chiTiets = sections.value.flatMap(section => {
@@ -367,7 +418,7 @@ onUnmounted(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in activeSection.items" :key="row.mucSo">
+              <tr v-for="row in activeSection.items" :key="row.mucSo" :id="'item-row-' + row.mucSo">
                 <td class="text-center">{{ row.mucSo }}</td>
                 <td>
                   <div class="criteria-text">{{ row.noiDung }}</div>
@@ -406,12 +457,116 @@ onUnmounted(() => {
         </button>
       </div>
     </form>
+
+    <!-- Sticky Progress Bar -->
+    <div class="sticky-progress-bar">
+      <div class="progress-info">
+        <span>Tiến độ: <strong>{{ completedCount }}/{{ totalCount }}</strong> tiêu chí ({{ progressPercent }}%)</span>
+        <button v-if="completedCount < totalCount" type="button" class="btn-goto-missing" @click="scrollToFirstUnchecked">
+          Tìm mục chưa tích <ion-icon name="arrow-down-outline"></ion-icon>
+        </button>
+        <span v-else class="progress-success"><ion-icon name="checkmark-circle-outline"></ion-icon> Đã hoàn thành</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.form-container { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; padding-bottom: 50px; }
+<style scoped>
+.form-container { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; padding-bottom: 120px !important; }
 .form-container form { display: flex; flex-direction: column; gap: 20px; }
+
+/* Sticky Progress Bar */
+.sticky-progress-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid #cbd5e1;
+  padding: 12px 24px;
+  box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.06);
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.btn-goto-missing {
+  background: #eff6ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-goto-missing:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.progress-success {
+  color: #16a34a;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #10b981);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 999px;
+}
+
+/* Flash Highlight Animation for incomplete item row */
+:global(tr.flash-highlight) {
+  animation: rowFlash 1.6s ease-in-out infinite;
+}
+
+@keyframes rowFlash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: #fee2e2;
+    box-shadow: inset 0 0 0 2px #ef4444;
+  }
+}
 .glass-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border-radius: 12px; padding: 24px; color: #334155; }
 .header-card { text-align: center; background: linear-gradient(135deg, #e0f2fe, #dcfce7); border-bottom: 3px solid #0ea5e9; }
 .header-card h2 { margin: 0 0 10px; font-size: 1.8rem; color: #0f172a; }

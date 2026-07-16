@@ -55,6 +55,10 @@
           </button>
 
           <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+          <p v-if="warmUpStatus && !isServerReady && !isLoading" class="warmup-text">
+            <span class="warmup-spinner"></span>
+            {{ warmUpStatus }}
+          </p>
         </form>
       </div>
     </div>
@@ -80,10 +84,17 @@ const isReady = ref(false)
 const isLeaving = ref(false)
 const errorMessage = ref('')
 const loginStatusMessage = ref('Đang đăng nhập...')
+const isServerReady = ref(false)
+const warmUpStatus = ref('')
 const router = useRouter()
 
 onMounted(() => {
-  warmUpApi()
+  // Start warm-up immediately
+  warmUpStatus.value = 'Đang kết nối máy chủ...'
+  warmUpApi(5, 3000).then(ok => {
+    isServerReady.value = ok
+    warmUpStatus.value = ok ? '' : ''
+  })
 
   const rememberedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY)
   if (rememberedEmail) {
@@ -103,20 +114,24 @@ const handleLogin = async () => {
 
   isLoading.value = true
   errorMessage.value = ''
-  loginStatusMessage.value = 'Đang kết nối máy chủ...'
+  loginStatusMessage.value = 'Đang xác thực...'
+
+  // Thiết lập timer thông minh: nếu sau 3.5s chưa xong thì báo đang đánh thức server
   const slowLoginTimer = window.setTimeout(() => {
-    loginStatusMessage.value = 'Máy chủ phản hồi hơi chậm, vui lòng chờ...'
-  }, 5000)
+    loginStatusMessage.value = 'Đang đánh thức máy chủ (khoảng 20-30s)...'
+  }, 3500)
 
   try {
     const session = await apiRequest('/Auth/dang-nhap', {
       method: 'POST',
-      timeoutMs: 15000,
+      timeoutMs: 60000, // Đợi tối đa 60s phòng trường hợp server ngủ đông trên Render
       body: JSON.stringify({
         email: email.value,
         matKhau: password.value
       })
     })
+
+    window.clearTimeout(slowLoginTimer)
 
     setAuthSession({
       token: session.token,
@@ -134,9 +149,15 @@ const handleLogin = async () => {
     isLeaving.value = true
     await router.push(session.vaiTro === 'Admin' ? '/admin' : '/employee')
   } catch (error) {
-    errorMessage.value = error.message || 'Dang nhap that bai'
-  } finally {
     window.clearTimeout(slowLoginTimer)
+    
+    // Custom thông điệp lỗi thân thiện
+    if (error.message?.includes('chậm') || error.message?.includes('abort') || error.message?.includes('Failed to fetch')) {
+      errorMessage.value = 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.'
+    } else {
+      errorMessage.value = error.message || 'Đăng nhập thất bại'
+    }
+  } finally {
     isLoading.value = false
   }
 }
@@ -456,6 +477,40 @@ button:disabled {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.warmup-text {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: fadeInUp 0.4s ease;
+}
+
+.warmup-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .register {

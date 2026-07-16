@@ -70,9 +70,38 @@ export const apiRequest = async (path, options = {}) => {
   return body
 }
 
-export const warmUpApi = () => {
-  fetch(`${API_BASE_URL}/health`, {
-    method: 'GET',
-    cache: 'no-store'
-  }).catch(() => null)
+/**
+ * Warm-up API server (Render.com free tier cold start).
+ * Retries up to `maxRetries` times with `intervalMs` gap.
+ * Returns a promise that resolves to true if server responded, false otherwise.
+ */
+export const warmUpApi = (maxRetries = 5, intervalMs = 3000) => {
+  let resolved = false
+
+  const ping = () =>
+    fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      cache: 'no-store'
+    })
+      .then(res => res.ok)
+      .catch(() => false)
+
+  return new Promise(resolve => {
+    let attempt = 0
+
+    const tryPing = async () => {
+      if (resolved) return
+      attempt++
+      const ok = await ping()
+
+      if (ok || attempt >= maxRetries) {
+        resolved = true
+        resolve(ok)
+      } else {
+        window.setTimeout(tryPing, intervalMs)
+      }
+    }
+
+    tryPing()
+  })
 }
